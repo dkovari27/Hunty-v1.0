@@ -38,6 +38,7 @@ class SiteConfig:
     search_url: str = ""
     job_url_substr: list[str] = field(default_factory=list)
     jobspy_country: str = ""
+    keywords_override: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +93,11 @@ _OVERRIDES: dict[str, dict] = {
     "www.olx.pl":                 {"scraper": "skip"},
 
     # ── Swiss company career pages ─────────────────────────────────────────────
+    # ─ Dead / redirected domains — no working careers page found ────────────────
+    "allocyte.com":       {"scraper": "skip"},   # moved to allocyte-pharmaceuticals.com, no careers page
+    "pharmabio.me":       {"scraper": "skip"},   # moved to pharmabiome.com, no careers page
+    "stromaltx.com":      {"scraper": "skip"},   # moved to stromaltherapeutics.ch, no careers page
+    "sydra.io":           {"scraper": "skip"},   # moved to sydra.bio, no careers page
     # ─ Big pharma — skip: all well-indexed on LinkedIn, only duplicates ───────
     "careers.roche.com":              {"scraper": "skip"},   # Roche + Roche Diagnostics
     "www.careers.jnj.com":           {"scraper": "skip"},   # J&J
@@ -148,6 +154,7 @@ _OVERRIDES: dict[str, dict] = {
     "jobs.ashbyhq.com/tandem": {
         "search_url": "https://jobs.ashbyhq.com/tandem?search={keyword}",
         "job_url_substr": ["/tandem/"],
+        "keywords_override": ["chemist"],   # Ashby ignores search param; scrape once
     },
     "jobs.ashbyhq.com/roivant": {
         "search_url": "https://jobs.ashbyhq.com/roivant?search={keyword}",
@@ -358,6 +365,7 @@ def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
             search_url=search_url,
             job_url_substr=overrides.get("job_url_substr", []),
             jobspy_country=overrides.get("jobspy_country", ""),
+            keywords_override=overrides.get("keywords_override", []),
         )
         sites.append(site)
 

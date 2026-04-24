@@ -21,10 +21,12 @@ _MAX_WORKERS = 8
 
 def _effective_keywords(site: SiteConfig, keywords: list[str]) -> list[str]:
     """
-    For sites whose search URL has no {keyword} placeholder every keyword
-    produces the same request.  Only scrape once to avoid N identical
-    Playwright launches.
+    Returns the keyword list to use for a given site.
+    - Per-site override wins (e.g. Tandem/Ashby boards that ignore the search param).
+    - Sites with no {keyword} placeholder in their URL are scraped once only.
     """
+    if site.keywords_override:
+        return site.keywords_override
     if "{keyword}" not in site.search_url:
         return keywords[:1]
     return keywords
