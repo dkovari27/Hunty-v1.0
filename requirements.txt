@@ -6,7 +6,7 @@ openpyxl>=3.1.0
 APScheduler>=3.10.0
 python-dotenv>=1.0.0
 pandas>=2.0.0
-numpy>=2.0.0
+numpy>=1.23.2
 
 # NOTE — python-jobspy must be installed separately on Python 3.14:
 #   pip install python-jobspy --no-deps
