@@ -45,10 +45,16 @@ _EU_COUNTRIES = {
 # Keyword editor dialog
 # ---------------------------------------------------------------------------
 class _KeywordEditorDialog:
-    """Modal dialog for viewing and editing search keywords."""
+    """Modal dialog for editing Swiss-market and global search keywords."""
 
-    def __init__(self, parent: tk.Tk, keywords: list[str], cv_suggestions: list[str]):
-        self._result: list[str] | None = None
+    def __init__(
+        self,
+        parent: tk.Tk,
+        swiss_keywords: list[str],
+        global_keywords: list[str],
+        cv_suggestions: list[str],
+    ):
+        self._result: tuple[list[str], list[str]] | None = None
 
         dlg = tk.Toplevel(parent)
         dlg.title("Edit Search Keywords")
@@ -57,47 +63,71 @@ class _KeywordEditorDialog:
         dlg.transient(parent)
         dlg.grab_set()
 
-        w, h = 500, 420
+        w, h = 540, 580
         px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
         tk.Label(
             dlg,
-            text="One search phrase per line — sent to LinkedIn, jobs.ch and Exa.",
-            font=(FONT, 9), fg=SUBTEXT, bg=BG, wraplength=470, justify="left",
-        ).pack(anchor="w", padx=16, pady=(12, 6))
+            text="One search phrase per line — case-insensitive.",
+            font=(FONT, 9), fg=SUBTEXT, bg=BG, wraplength=510, justify="left",
+        ).pack(anchor="w", padx=16, pady=(12, 8))
 
-        frame = tk.Frame(dlg, bg=BG)
-        frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 6))
+        # ── Swiss market ─────────────────────────────────────────────────
+        tk.Label(
+            dlg,
+            text="Swiss market — jobs.ch and Swiss company career pages:",
+            font=(FONT, 9, "bold"), fg=DARK_BLUE, bg=BG,
+        ).pack(anchor="w", padx=16)
 
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self._text = tk.Text(
-            frame, font=(FONT, 10), wrap=tk.WORD,
-            yscrollcommand=scrollbar.set,
+        swiss_frame = tk.Frame(dlg, bg=BG)
+        swiss_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 10))
+        swiss_sb = tk.Scrollbar(swiss_frame)
+        swiss_sb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._swiss_text = tk.Text(
+            swiss_frame, font=(FONT, 10), wrap=tk.WORD,
+            yscrollcommand=swiss_sb.set, height=7,
             relief=tk.FLAT, bd=0,
             highlightbackground=SEP_COLOR, highlightthickness=1,
         )
-        self._text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self._text.yview)
+        self._swiss_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        swiss_sb.config(command=self._swiss_text.yview)
+        self._swiss_text.insert("1.0", "\n".join(swiss_keywords))
 
-        lines = list(keywords)
+        # ── Everything else ───────────────────────────────────────────────
+        tk.Label(
+            dlg,
+            text="Everything else — LinkedIn, Exa and organic-chemistry.org:",
+            font=(FONT, 9, "bold"), fg=DARK_BLUE, bg=BG,
+        ).pack(anchor="w", padx=16)
+
+        global_frame = tk.Frame(dlg, bg=BG)
+        global_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 8))
+        global_sb = tk.Scrollbar(global_frame)
+        global_sb.pack(side=tk.RIGHT, fill=tk.Y)
+        lines = list(global_keywords)
         if cv_suggestions:
             lines += ["", "# ── Suggested from CV (delete lines you don't want) ──"]
             lines += cv_suggestions
-        self._text.insert("1.0", "\n".join(lines))
+        self._global_text = tk.Text(
+            global_frame, font=(FONT, 10), wrap=tk.WORD,
+            yscrollcommand=global_sb.set, height=8,
+            relief=tk.FLAT, bd=0,
+            highlightbackground=SEP_COLOR, highlightthickness=1,
+        )
+        self._global_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        global_sb.config(command=self._global_text.yview)
+        self._global_text.insert("1.0", "\n".join(lines))
 
+        # ── Buttons ───────────────────────────────────────────────────────
         btn_frame = tk.Frame(dlg, bg=BG)
         btn_frame.pack(fill=tk.X, padx=16, pady=(0, 12))
-
         tk.Button(
             btn_frame, text="Cancel", command=dlg.destroy,
             font=(FONT, 10), bg=BG, fg=TEXT,
             relief=tk.FLAT, bd=1, padx=16, pady=5, cursor="hand2",
         ).pack(side=tk.RIGHT, padx=(6, 0))
-
         tk.Button(
             btn_frame, text="  OK  ", command=lambda: self._ok(dlg),
             font=(FONT, 10, "bold"), bg=DARK_BLUE, fg="white",
@@ -107,15 +137,16 @@ class _KeywordEditorDialog:
         parent.wait_window(dlg)
 
     def _ok(self, dlg: tk.Toplevel) -> None:
-        raw = self._text.get("1.0", tk.END)
-        self._result = [
-            line.strip() for line in raw.splitlines()
-            if line.strip() and not line.strip().startswith("#")
-        ]
+        def _parse(widget: tk.Text) -> list[str]:
+            return [
+                ln.strip() for ln in widget.get("1.0", tk.END).splitlines()
+                if ln.strip() and not ln.strip().startswith("#")
+            ]
+        self._result = (_parse(self._swiss_text), _parse(self._global_text))
         dlg.destroy()
 
     @property
-    def result(self) -> list[str] | None:
+    def result(self) -> tuple[list[str], list[str]] | None:
         return self._result
 
 
@@ -541,8 +572,10 @@ class JobHunterApp:
             PREFILTER_EXCLUDED_TITLE,
             PREFILTER_REQUIRED,
             SEARCH_KEYWORDS,
+            SWISS_SEARCH_KEYWORDS,
         )
-        self._keywords: list[str] = list(SEARCH_KEYWORDS)
+        self._keywords: list[str]       = list(SEARCH_KEYWORDS)
+        self._swiss_keywords: list[str] = list(SWISS_SEARCH_KEYWORDS)
         self._cv_path: str | None = None
         self._cv_suggestions: list[str] = []
         self._countries: list[str] = ["Switzerland"]
@@ -842,9 +875,9 @@ class JobHunterApp:
     # ------------------------------------------------------------------
 
     def _kw_summary(self) -> str:
-        n = len(self._keywords)
+        ns, ng = len(self._swiss_keywords), len(self._keywords)
         suf = f"  (+{len(self._cv_suggestions)} from CV)" if self._cv_suggestions else ""
-        return f"{n} search keyword{'s' if n != 1 else ''}{suf}"
+        return f"{ns} Swiss · {ng} global keyword{'s' if ng != 1 else ''}{suf}"
 
     def _countries_summary(self) -> str:
         if not self._countries:
@@ -918,9 +951,11 @@ class JobHunterApp:
     # ------------------------------------------------------------------
 
     def _open_keyword_editor(self) -> None:
-        dlg = _KeywordEditorDialog(self.root, self._keywords, self._cv_suggestions)
+        dlg = _KeywordEditorDialog(
+            self.root, self._swiss_keywords, self._keywords, self._cv_suggestions
+        )
         if dlg.result is not None:
-            self._keywords = dlg.result
+            self._swiss_keywords, self._keywords = dlg.result
             self._kw_label.config(text=self._kw_summary())
 
     # ------------------------------------------------------------------
@@ -1100,6 +1135,7 @@ class JobHunterApp:
             args=(
                 self.ai_var.get(),
                 list(self._keywords) or None,
+                list(self._swiss_keywords) or None,
                 "Switzerland",
                 list(self._countries) or None,
                 list(self._prefilter_required),
@@ -1152,6 +1188,7 @@ class JobHunterApp:
             "saved_at":            datetime.now().isoformat(timespec="seconds"),
             "countries":           list(self._countries),
             "keywords":            list(self._keywords),
+            "swiss_keywords":      list(self._swiss_keywords),
             "enable_ai":           bool(self.ai_var.get()),
             "prefilter_required":  list(self._prefilter_required),
             "prefilter_excluded":  list(self._prefilter_excluded),
@@ -1183,6 +1220,9 @@ class JobHunterApp:
 
         if isinstance(data.get("keywords"), list):
             self._keywords = data["keywords"]
+            self._kw_label.config(text=self._kw_summary())
+        if isinstance(data.get("swiss_keywords"), list):
+            self._swiss_keywords = data["swiss_keywords"]
             self._kw_label.config(text=self._kw_summary())
         if isinstance(data.get("countries"), list):
             self._countries = data["countries"] or ["Switzerland"]
@@ -1216,6 +1256,7 @@ class JobHunterApp:
         self,
         enable_ai: bool,
         keywords: list[str] | None,
+        swiss_keywords: list[str] | None,
         location: str,
         countries: list[str] | None,
         prefilter_required: list[str] | None = None,
@@ -1230,6 +1271,7 @@ class JobHunterApp:
                 progress_callback=self._on_progress,
                 enable_ai_scoring=enable_ai,
                 keywords_override=keywords,
+                swiss_keywords_override=swiss_keywords,
                 location_override=location,
                 countries_override=countries,
                 prefilter_required_override=prefilter_required,

@@ -20,6 +20,7 @@ ENABLE_ORGCHEM  = True   # organic-chemistry.org/jobs/europe.htm
 # ---------------------------------------------------------------------------
 # Search preferences (apply to all enabled sources)
 # ---------------------------------------------------------------------------
+# Used for LinkedIn, Exa, organic-chemistry.org — specific phrases work best here
 SEARCH_KEYWORDS = [
     "Medicinal chemist drug discovery",
     "Synthetic medicinal chemist hit-to-lead",
@@ -28,7 +29,17 @@ SEARCH_KEYWORDS = [
     "Computational medicinal chemist",
     "Research scientist medicinal chemistry CRO",
     "AI drug discovery chemist",
-    "Small molecule drug discovery scientist Basel",
+    "Small molecule drug discovery scientist",
+]
+
+# Used for jobs.ch and Swiss company career pages — short terms work better
+SWISS_SEARCH_KEYWORDS = [
+    "medicinal chemist",
+    "synthetic chemist",
+    "drug discovery",
+    "Chemiker",
+    "medicinal chemistry",
+    "organic chemist",
 ]
 LOCATION = "Basel"
 RADIUS_MILES = 25

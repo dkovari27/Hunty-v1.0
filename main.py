@@ -28,6 +28,7 @@ from config import (
     PREFILTER_EXCLUDED_TITLE,
     PREFILTER_REQUIRED,
     SEARCH_KEYWORDS,
+    SWISS_SEARCH_KEYWORDS,
     ENABLE_SWISS_COMPANIES,
 )
 
@@ -99,6 +100,7 @@ def run_job_scraper(
     progress_callback=None,
     enable_ai_scoring: bool | None = None,
     keywords_override: list[str] | None = None,
+    swiss_keywords_override: list[str] | None = None,
     location_override: str | None = None,
     countries_override: list[str] | None = None,
     prefilter_required_override: list[str] | None = None,
@@ -134,8 +136,9 @@ def run_job_scraper(
     if enable_ai_scoring is None:
         enable_ai_scoring = ENABLE_AI_SCORING
 
-    keywords     = keywords_override if keywords_override is not None else SEARCH_KEYWORDS
-    exa_location = location_override or "Switzerland"
+    keywords       = keywords_override       if keywords_override       is not None else SEARCH_KEYWORDS
+    swiss_keywords = swiss_keywords_override if swiss_keywords_override is not None else SWISS_SEARCH_KEYWORDS
+    exa_location   = location_override or "Switzerland"
 
     # European scraper: use countries_override when GUI provides it,
     # otherwise fall back to config flags.
@@ -169,8 +172,9 @@ def run_job_scraper(
 
     logger.info("=" * 60)
     logger.info("Run started  %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    logger.info("Keywords:    %s", keywords)
-    logger.info("Location:    %s", exa_location)
+    logger.info("Keywords (global): %s", keywords)
+    logger.info("Keywords (Swiss):  %s", swiss_keywords)
+    logger.info("Location:          %s", exa_location)
     _progress(0, "Starting scrape…")
 
     raw_jobs: list[dict] = []
@@ -212,7 +216,7 @@ def run_job_scraper(
         _step += 1
         _progress(16, f"[{_step}/{_total_sources}] Scraping jobs.ch…")
         from scrapers.jobsch_scraper import scrape_jobsch
-        jobsch_jobs = scrape_jobsch(keywords)
+        jobsch_jobs = scrape_jobsch(swiss_keywords)
         raw_jobs.extend(jobsch_jobs)
         logger.info("jobs.ch:  %d jobs", len(jobsch_jobs))
         _progress(27, f"[{_step}/{_total_sources}] jobs.ch: {len(jobsch_jobs)} jobs found")
@@ -268,7 +272,7 @@ def run_job_scraper(
             _progress(43 + frac * 14, f"[{_step}/{_total_sources}] {msg}")  # 43 % → 57 %
 
         swiss_jobs = scrape_swiss_companies(
-            keywords=keywords,
+            keywords=swiss_keywords,
             location=exa_location,
             progress_callback=_swiss_progress,
         )
