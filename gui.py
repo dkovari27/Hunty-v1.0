@@ -1279,7 +1279,7 @@ class JobHunterApp:
                 prefilter_excluded_locations_override=excluded_locations,
                 cancel_event=self._cancel_event,
             )
-            path, new_count = result if isinstance(result, tuple) else (result, None)
+            path, new_count, stats = result if isinstance(result, tuple) and len(result) == 3 else (result, None, None)
 
             pdf_path = None
             if path:
@@ -1290,7 +1290,7 @@ class JobHunterApp:
                         jobs = load_jobs_from_excel(path, new_only=False)
                     if jobs:
                         pdf_path = path.replace(".xlsx", ".pdf")
-                        generate_pdf(jobs, pdf_path)
+                        generate_pdf(jobs, pdf_path, stats=stats)
                 except Exception as pdf_exc:
                     logging.getLogger(__name__).warning("PDF generation failed: %s", pdf_exc)
 

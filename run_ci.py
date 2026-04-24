@@ -5,7 +5,6 @@ Runs the full scraper pipeline, generates a PDF of new jobs,
 and emails it.  Exits 0 on success or when there is nothing to send.
 """
 import logging
-import os
 import sys
 
 from email_sender import send_report
@@ -17,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    """Run the full scrape → PDF → email pipeline for CI/scheduled execution."""
     logger.info("CI run starting")
 
     result = run_job_scraper()
@@ -24,7 +24,7 @@ def main() -> None:
         logger.info("No jobs scraped — nothing to send.")
         sys.exit(0)
 
-    excel_path, new_count = result
+    excel_path, new_count, stats = result
 
     if new_count == 0:
         logger.info("No new jobs this run — skipping email.")
@@ -36,7 +36,7 @@ def main() -> None:
     if not jobs:
         logger.info("No NEW-flagged rows in Excel — skipping email.")
         sys.exit(0)
-    generate_pdf(jobs, pdf_path)
+    generate_pdf(jobs, pdf_path, stats=stats)
 
     # Email it
     send_report(pdf_path, new_count)

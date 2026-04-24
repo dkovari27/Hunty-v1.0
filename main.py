@@ -13,6 +13,7 @@ Run scheduled:  python scheduler.py
 import logging
 import os
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -170,6 +171,10 @@ def run_job_scraper(
         if progress_callback:
             progress_callback(pct, msg)
 
+    _run_start = time.time()
+    _source_counts: dict[str, int] = {}
+    _source_times:  dict[str, float] = {}
+
     logger.info("=" * 60)
     logger.info("Run started  %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     logger.info("Keywords (global): %s", keywords)
@@ -188,6 +193,7 @@ def run_job_scraper(
     # ------------------------------------------------------------------ #
     if ENABLE_INDEED and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(2, f"[{_step}/{_total_sources}] Scraping Indeed…")
         from scrapers.indeed_scraper import scrape_indeed
         indeed_jobs = scrape_indeed(keywords)
@@ -196,30 +202,38 @@ def run_job_scraper(
         raw_jobs.extend(indeed_jobs)
         logger.info("Indeed:   %d jobs", len(indeed_jobs))
         _progress(4, f"[{_step}/{_total_sources}] Indeed: {len(indeed_jobs)} jobs found")
+        _source_counts["Indeed"] = len(indeed_jobs)
+        _source_times["Indeed"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 2 — LinkedIn (Europe-wide; distance column shows Basel proximity)
     # ------------------------------------------------------------------ #
     if ENABLE_LINKEDIN and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(5, f"[{_step}/{_total_sources}] Scraping LinkedIn…")
         from scrapers.linkedin_scraper import scrape_linkedin
         linkedin_jobs = scrape_linkedin(keywords)
         raw_jobs.extend(linkedin_jobs)
         logger.info("LinkedIn: %d jobs", len(linkedin_jobs))
         _progress(15, f"[{_step}/{_total_sources}] LinkedIn: {len(linkedin_jobs)} jobs found")
+        _source_counts["LinkedIn"] = len(linkedin_jobs)
+        _source_times["LinkedIn"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 3 — jobs.ch (Switzerland-wide, no location filter)
     # ------------------------------------------------------------------ #
     if ENABLE_JOBSCH and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(16, f"[{_step}/{_total_sources}] Scraping jobs.ch…")
         from scrapers.jobsch_scraper import scrape_jobsch
         jobsch_jobs = scrape_jobsch(swiss_keywords)
         raw_jobs.extend(jobsch_jobs)
         logger.info("jobs.ch:  %d jobs", len(jobsch_jobs))
         _progress(27, f"[{_step}/{_total_sources}] jobs.ch: {len(jobsch_jobs)} jobs found")
+        _source_counts["jobs.ch"] = len(jobsch_jobs)
+        _source_times["jobs.ch"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 4 — Exa semantic search (no domain restriction)
@@ -229,6 +243,7 @@ def run_job_scraper(
             logger.warning("EXA_API_KEY not set — skipping Exa source.")
         else:
             _step += 1
+            _t0 = time.time()
             _progress(28, f"[{_step}/{_total_sources}] Searching via Exa…")
             sys.path.insert(0, str(Path(__file__).parent / "exa_search"))
             from exa_scraper import scrape_exa  # type: ignore
@@ -247,24 +262,30 @@ def run_job_scraper(
             raw_jobs.extend(exa_jobs)
             logger.info("Exa:      %d jobs", len(exa_jobs))
             _progress(38, f"[{_step}/{_total_sources}] Exa: {len(exa_jobs)} jobs found")
+            _source_counts["Exa"] = len(exa_jobs)
+            _source_times["Exa"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 5 — organic-chemistry.org (European chemistry listings)
     # ------------------------------------------------------------------ #
     if ENABLE_ORGCHEM and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(39, f"[{_step}/{_total_sources}] Scraping organic-chemistry.org…")
         from scrapers.orgchem_scraper import scrape_orgchem
         orgchem_jobs = scrape_orgchem()
         raw_jobs.extend(orgchem_jobs)
         logger.info("organic-chemistry.org: %d jobs", len(orgchem_jobs))
         _progress(42, f"[{_step}/{_total_sources}] organic-chemistry.org: {len(orgchem_jobs)} jobs found")
+        _source_counts["organic-chemistry.org"] = len(orgchem_jobs)
+        _source_times["organic-chemistry.org"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 6 — Swiss company career pages
     # ------------------------------------------------------------------ #
     if run_swiss and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(43, f"[{_step}/{_total_sources}] Scraping Swiss company career pages…")
         from scrapers.european import scrape_swiss_companies
 
@@ -279,12 +300,15 @@ def run_job_scraper(
         raw_jobs.extend(swiss_jobs)
         logger.info("Swiss companies: %d jobs", len(swiss_jobs))
         _progress(57, f"[{_step}/{_total_sources}] Swiss companies: {len(swiss_jobs)} jobs found")
+        _source_counts["Swiss Companies"] = len(swiss_jobs)
+        _source_times["Swiss Companies"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
     # Source 7 — European multi-country job boards
     # ------------------------------------------------------------------ #
     if run_european and not _is_cancelled():
         _step += 1
+        _t0 = time.time()
         _progress(57, f"[{_step}/{_total_sources}] Scraping European job boards…")
         from scrapers.european import scrape_european_sites
 
@@ -300,6 +324,8 @@ def run_job_scraper(
         raw_jobs.extend(eu_jobs)
         logger.info("European: %d jobs", len(eu_jobs))
         _progress(64, f"[{_step}/{_total_sources}] European: {len(eu_jobs)} jobs found")
+        _source_counts["European boards"] = len(eu_jobs)
+        _source_times["European boards"]  = time.time() - _t0
 
     if _is_cancelled():
         logger.info("Run cancelled — exporting %d collected jobs", len(raw_jobs))
@@ -388,7 +414,24 @@ def run_job_scraper(
     logger.info("Output: %s", output_path)
     logger.info("=" * 60)
 
-    return output_path, new_count
+    _run_time    = time.time() - _run_start
+    _slowest_src = max(_source_times, key=_source_times.get) if _source_times else None
+    _n_unique    = len(raw_jobs)   # raw_jobs is the deduped list at this point
+
+    stats = {
+        "sources":            [(n, _source_counts[n], _source_times[n]) for n in _source_counts],
+        "total_scraped":      sum(_source_counts.values()),
+        "duplicates_removed": dropped_dupes,
+        "unique_jobs":        _n_unique,
+        "dropped_by_filter":  _n_unique - len(prefiltered),
+        "passed_to_export":   len(to_write),
+        "new_count":          new_count,
+        "run_time_s":         _run_time,
+        "slowest_source":     _slowest_src,
+        "slowest_source_time_s": _source_times.get(_slowest_src, 0) if _slowest_src else 0,
+    }
+
+    return output_path, new_count, stats
 
 
 if __name__ == "__main__":

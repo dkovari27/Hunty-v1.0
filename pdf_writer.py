@@ -15,6 +15,7 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Paragraph,
     SimpleDocTemplate,
@@ -43,6 +44,13 @@ _LINK_BLUE  = colors.HexColor("#0563C1")
 _STRIPE     = colors.HexColor("#EEF4FA")
 _BORDER     = colors.HexColor("#C8D8E8")
 _GREY_TEXT  = colors.HexColor("#555555")
+
+
+# ── Stats table colours ────────────────────────────────────────────────────────
+_STAT_SECTION = colors.HexColor("#D6E4F0")
+_STAT_NEW     = colors.HexColor("#D4EDDA")
+_STAT_STRIPE  = colors.HexColor("#F5F9FC")
+_NEW_TEXT     = colors.HexColor("#155724")
 
 
 # ── Paragraph styles ───────────────────────────────────────────────────────────
@@ -77,6 +85,117 @@ def _make_styles() -> tuple:
         textColor=_LINK_BLUE,
     )
     return title_style, header_style, cell_style, link_style
+
+
+# ── Run-summary table ──────────────────────────────────────────────────────────
+
+def _build_stats_table(stats: dict) -> Table:
+    """Centred two-column table summarising scrape stats for the PDF header."""
+    _FONT  = "Helvetica"
+    _FSIZE = 8.5
+    _PAD   = 8
+
+    hdr  = ParagraphStyle("sh",  fontName="Helvetica-Bold",        fontSize=_FSIZE, textColor=colors.white, leading=12)
+    hdrc = ParagraphStyle("shc", fontName="Helvetica-Bold",        fontSize=_FSIZE, textColor=colors.white, leading=12, alignment=1)
+    sec  = ParagraphStyle("ss",  fontName="Helvetica-BoldOblique", fontSize=8,      textColor=_DARK_BLUE,   leading=11, alignment=1)
+    lbl  = ParagraphStyle("sl",  fontName=_FONT,                   fontSize=_FSIZE, textColor=colors.black, leading=12)
+    lbl_c= ParagraphStyle("slc", fontName=_FONT,                   fontSize=_FSIZE, textColor=colors.black, leading=12, alignment=1)
+    val  = ParagraphStyle("sv",  fontName=_FONT,                   fontSize=_FSIZE, textColor=colors.black, leading=12, alignment=1)
+    nlbl = ParagraphStyle("snl", fontName="Helvetica-Bold",        fontSize=_FSIZE, textColor=_NEW_TEXT,    leading=12, alignment=1)
+    nval = ParagraphStyle("snv", fontName="Helvetica-Bold",        fontSize=_FSIZE, textColor=_NEW_TEXT,    leading=12, alignment=1)
+    _e   = Paragraph("", lbl)
+
+    sources  = stats.get("sources", [])
+    pipeline = [
+        ("    Total scraped",            stats.get("total_scraped", 0)),
+        ("    Duplicates removed",        stats.get("duplicates_removed", 0)),
+        ("    Unique jobs",               stats.get("unique_jobs", 0)),
+        ("    Dropped by keyword filter", stats.get("dropped_by_filter", 0)),
+        ("    Passed to export",          stats.get("passed_to_export", 0)),
+    ]
+
+    # ── Column width: longest label + 6 char-widths + padding ────────────────
+    fixed_labels = [
+        "  Sources", "  Pipeline",
+        "    Total scraped", "    Duplicates removed", "    Unique jobs",
+        "    Dropped by keyword filter", "    Passed to export",
+        "New vs previous run", "Total run time", "Metric",
+    ]
+    source_labels = [f"    {name}" for name, _, _ in sources]
+    max_text_w = max(stringWidth(s, _FONT, _FSIZE) for s in fixed_labels + source_labels)
+    col_w = max_text_w + stringWidth("x" * 6, _FONT, _FSIZE) + _PAD * 2
+    cnt_w = col_w / 2
+
+    rows       = []
+    style_cmds = []
+
+    def _bg(c0, c1, ri, colour):
+        style_cmds.append(("BACKGROUND", (c0, ri), (c1, ri), colour))
+
+    def _span(c0, c1, ri):
+        style_cmds.append(("SPAN", (c0, ri), (c1, ri)))
+
+    # ── Row 0: column headers ─────────────────────────────────────────────────
+    rows.append([Paragraph("Metric", hdr), Paragraph("Count", hdrc),
+                 Paragraph("Metric", hdr), Paragraph("Count", hdrc)])
+    _bg(0, 3, 0, _DARK_BLUE)
+
+    # ── Row 1: section labels side by side ───────────────────────────────────
+    rows.append([Paragraph("  Sources", sec),  _e,
+                 Paragraph("  Pipeline", sec), _e])
+    _bg(0, 1, 1, _STAT_SECTION); _span(0, 1, 1)
+    _bg(2, 3, 1, _STAT_SECTION); _span(2, 3, 1)
+
+    # ── Data rows: sources left, pipeline right (pad shorter side) ────────────
+    n = max(len(sources), len(pipeline))
+    for i in range(n):
+        left_lbl = left_val = _e
+        if i < len(sources):
+            sname, scount, _ = sources[i]
+            left_lbl = Paragraph(f"    {sname}", lbl)
+            left_val = Paragraph(str(scount), val)
+
+        right_lbl = right_val = _e
+        if i < len(pipeline):
+            plabel, pcount = pipeline[i]
+            right_lbl = Paragraph(plabel, lbl)
+            right_val = Paragraph(str(pcount), val)
+
+        rows.append([left_lbl, left_val, right_lbl, right_val])
+        if i % 2 == 0:
+            _bg(0, 3, len(rows) - 1, _STAT_STRIPE)
+
+    # ── New vs previous run — spans full left half / right half ──────────────
+    new_idx = len(rows)
+    rows.append([Paragraph("New vs previous run", nlbl), _e,
+                 Paragraph(str(stats.get("new_count", 0)), nval), _e])
+    _bg(0, 3, new_idx, _STAT_NEW)
+    _span(0, 1, new_idx); _span(2, 3, new_idx)
+
+    # ── Total run time ────────────────────────────────────────────────────────
+    run_s    = stats.get("run_time_s", 0)
+    run_str  = f"{int(run_s // 60)}m {int(run_s % 60)}s" if run_s >= 60 else f"{int(run_s)}s"
+    time_idx = len(rows)
+    rows.append([Paragraph("Total run time", lbl_c), _e,
+                 Paragraph(run_str, val), _e])
+    _span(0, 1, time_idx); _span(2, 3, time_idx)
+
+    # ── Shared structural styles ──────────────────────────────────────────────
+    style_cmds += [
+        ("BOX",          (0, 0), (-1, -1), 0.8, _MID_BLUE),
+        ("LINEBELOW",    (0, 0), (-1, -1), 0.4, _BORDER),
+        ("LINEAFTER",    (0, 0), (-1, -1), 0.4, _BORDER),
+        ("LINEAFTER",    (1, 0), (1, -1),  1.2, _MID_BLUE),
+        ("VALIGN",       (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING",   (0, 0), (-1, -1), 4),
+        ("BOTTOMPADDING",(0, 0), (-1, -1), 4),
+        ("LEFTPADDING",  (0, 0), (-1, -1), _PAD),
+        ("RIGHTPADDING", (0, 0), (-1, -1), _PAD),
+    ]
+
+    tbl = Table(rows, colWidths=[col_w, cnt_w, col_w, cnt_w], hAlign="CENTER")
+    tbl.setStyle(TableStyle(style_cmds))
+    return tbl
 
 
 # ── Excel loader ───────────────────────────────────────────────────────────────
@@ -121,11 +240,14 @@ def generate_pdf(
     jobs: list[dict],
     output_path: str,
     report_title: str = "Hunty — New Job Listings",
+    stats: dict | None = None,
 ) -> str:
     """
     Write a PDF job report to output_path.
 
     Each job dict must have: title, location, url.
+    stats — optional run-summary dict from run_job_scraper(); when provided
+            a summary table is inserted between the header and jobs table.
     Returns output_path.
     """
     title_style, header_style, cell_style, link_style = _make_styles()
@@ -197,11 +319,14 @@ def generate_pdf(
 
     date_label = datetime.now().strftime("%d/%m/%y")
 
-    story = [
+    story: list = [
         Paragraph(f"Hunty — {date_label}", title_style),
-        Spacer(1, 4),
-        table,
+        Spacer(1, 6),
     ]
+    if stats:
+        story.append(_build_stats_table(stats))
+        story.append(Spacer(1, 10))
+    story.append(table)
 
     def _footer(canvas, doc):
         canvas.saveState()
