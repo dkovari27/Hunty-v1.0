@@ -193,10 +193,6 @@ _OVERRIDES: dict[str, dict] = {
         "job_url_substr": ["/noema/"],
     },
     # ─ Simple listing pages (no keyword filter; scrapes all open roles) ───────
-    "spirochem.com": {
-        "search_url": "https://spirochem.com/careers/",
-        "job_url_substr": ["/careers/"],
-    },
     "www.carbogen-amcis.com": {
         "search_url": "https://www.carbogen-amcis.com/careers/open-positions",
         "job_url_substr": ["/open-positions/"],
@@ -331,6 +327,7 @@ def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
 
     for row in ws.iter_rows(min_row=2, values_only=True):
         country, name, url, description = (row[i] if i < len(row) else "" for i in range(4))
+        excel_status = str(row[4] if len(row) > 4 and row[4] else "").strip().lower()
         if not url or not str(url).startswith("http"):
             continue
 
@@ -349,11 +346,19 @@ def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
         # then plain domain, then empty dict.
         overrides = _OVERRIDES.get(dom_path) or _OVERRIDES.get(domain, {})
 
+        # Excel "Status" column lets the user toggle companies without touching
+        # code. "Skip" in the spreadsheet marks the site inactive.
+        # _OVERRIDES technical skips (login-walls, big pharma, dead domains)
+        # always take precedence.
+        scraper = overrides.get("scraper", "generic")
+        if excel_status == "skip" and scraper == "generic":
+            scraper = "skip"
+
         base_url   = str(url).rstrip("/")
         search_url = overrides.get("search_url", "")
         # Fallback: use the career-page URL as the listing URL when no explicit
         # search URL is configured (lets Playwright scrape static listing pages).
-        if not search_url and overrides.get("scraper", "generic") == "generic":
+        if not search_url and scraper == "generic":
             search_url = base_url
 
         site = SiteConfig(
@@ -361,7 +366,7 @@ def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
             name=str(name or ""),
             base_url=base_url,
             description=str(description or ""),
-            scraper=overrides.get("scraper", "generic"),
+            scraper=scraper,
             search_url=search_url,
             job_url_substr=overrides.get("job_url_substr", []),
             jobspy_country=overrides.get("jobspy_country", ""),
