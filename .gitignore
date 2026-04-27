@@ -20,13 +20,14 @@ venv/
 outputs/*.xlsx
 outputs/*.pdf
 outputs/*.log
-outputs/last_run.json
+outputs/*.json
+!outputs/seen_jobs_history.json
+!outputs/portals.yml
 
 # Personal / local-only
 config_personal.py
 settings/
 CV/
-output/
 *.lnk
 *.code-workspace
 

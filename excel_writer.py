@@ -253,9 +253,21 @@ def _save_history(output_dir: str, history: dict[str, str]) -> None:
 # Column definitions
 # ---------------------------------------------------------------------------
 
+# Application-status colour fills (applied to the App. Status cell)
+_APP_STATUS_FILLS = {
+    "Saved":       PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid"),
+    "Applied":     PatternFill(start_color="BDD7EE", end_color="BDD7EE", fill_type="solid"),
+    "Interviewing":PatternFill(start_color="FFE4B5", end_color="FFE4B5", fill_type="solid"),
+    "Offer":       PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid"),
+    "Rejected":    PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid"),
+    "Accepted":    PatternFill(start_color="00B050", end_color="00B050", fill_type="solid"),
+    "Withdrawn":   PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid"),
+}
+
 # (header label, job dict key, column width)
 _COLUMNS = [
     ("Status",            "_status",           8),
+    ("App. Status",       "_app_status",       13),
     ("Score",             "relevance_score",   8),
     ("Job Title",         "title",             36),
     ("Company",           "company",           24),
@@ -348,12 +360,14 @@ def _write_urls_sheet(wb: openpyxl.Workbook, jobs: list[dict]) -> None:
 
 def write_excel(jobs: list[dict], all_jobs: list[dict] | None = None,
                 filename: str | None = None,
-                previous_urls: dict[str, str] | None = None) -> tuple[str, int]:
+                previous_urls: dict[str, str] | None = None,
+                applications: dict[str, dict] | None = None) -> tuple[str, int]:
     """
     Write jobs to an Excel file in OUTPUT_DIR.
     Returns (full_path, new_job_count).
 
-    previous_urls: {url: first_seen_date} from load_previous_urls().
+    previous_urls:  {url: first_seen_date} from load_previous_urls().
+    applications:   {url: {status, title, company, updated}} from application_tracker.load().
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -377,6 +391,12 @@ def write_excel(jobs: list[dict], all_jobs: list[dict] | None = None,
 
     # Persist updated history so the next run knows about today's jobs
     _save_history(OUTPUT_DIR, history)
+
+    # Inject application status from tracker
+    apps = applications or {}
+    for job in jobs:
+        url = job.get("url", "").strip()
+        job["_app_status"] = apps.get(url, {}).get("status", "")
 
     new_count = sum(1 for j in jobs if j["_status"] == "NEW")
 
@@ -434,6 +454,13 @@ def write_excel(jobs: list[dict], all_jobs: list[dict] | None = None,
                 cell.fill      = _new_fill if is_new else _seen_fill
                 cell.font      = Font(bold=True, color="1F4E79" if is_new else "999999", size=9)
                 cell.alignment = Alignment(horizontal="center", vertical="top")
+            elif key == "_app_status":
+                app_fill = _APP_STATUS_FILLS.get(value)
+                if app_fill:
+                    cell.fill = app_fill
+                cell.font      = Font(bold=bool(value), size=9,
+                                      color="155724" if value == "Accepted" else "000000")
+                cell.alignment = Alignment(horizontal="center", vertical="top", wrap_text=False)
             elif not is_new:
                 # De-emphasise seen rows: gray text, light gray background
                 cell.fill = _seen_fill
@@ -506,3 +533,30 @@ def write_excel(jobs: list[dict], all_jobs: list[dict] | None = None,
         filepath, len(jobs), new_count, len(all_jobs) if all_jobs else 0,
     )
     return filepath, new_count
+
+
+def export_jobs_json(jobs: list[dict], output_path: str) -> None:
+    """
+    Write jobs to a JSON side-output file.
+
+    Wraps the list in {"jobs": [...], "count": N, "timestamp": "...", "source": "scraper_export"}.
+    Non-serialisable values (datetime objects, numpy types, etc.) are coerced to str.
+    """
+    from datetime import datetime
+
+    def _safe(v):
+        if isinstance(v, (str, int, float, bool, list, dict)) or v is None:
+            return v
+        return str(v)
+
+    payload = {
+        "jobs":      [{k: _safe(v) for k, v in job.items()} for job in jobs],
+        "count":     len(jobs),
+        "timestamp": datetime.now().isoformat(),
+        "source":    "scraper_export",
+    }
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+    logger.info("JSON export: %s (%d jobs)", output_path, len(jobs))

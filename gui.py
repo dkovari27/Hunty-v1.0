@@ -17,16 +17,17 @@ from tkinter import filedialog, messagebox, ttk
 # ---------------------------------------------------------------------------
 # Colours & fonts
 # ---------------------------------------------------------------------------
-BG        = "#F5F7FA"
+BG = "#F5F7FA"
 DARK_BLUE = "#1F4E79"
-MID_BLUE  = "#2E75B6"
-GREEN     = "#217346"
-TEXT      = "#1A1A1A"
-SUBTEXT   = "#666666"
+MID_BLUE = "#2E75B6"
+GREEN = "#217346"
+TEXT = "#1A1A1A"
+SUBTEXT = "#666666"
 SEP_COLOR = "#D0D7E3"
-FONT      = "Segoe UI"
+FONT = "Segoe UI"
 
-_SETTINGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings")
+_SETTINGS_DIR = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), "settings")
 
 _ALL_COUNTRIES = [
     "Switzerland", "Germany", "United Kingdom", "Netherlands",
@@ -64,7 +65,7 @@ class _KeywordEditorDialog:
         dlg.grab_set()
 
         w, h = 540, 580
-        px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
+        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
@@ -108,7 +109,8 @@ class _KeywordEditorDialog:
         global_sb.pack(side=tk.RIGHT, fill=tk.Y)
         lines = list(global_keywords)
         if cv_suggestions:
-            lines += ["", "# ── Suggested from CV (delete lines you don't want) ──"]
+            lines += ["",
+                      "# ── Suggested from CV (delete lines you don't want) ──"]
             lines += cv_suggestions
         self._global_text = tk.Text(
             global_frame, font=(FONT, 10), wrap=tk.WORD,
@@ -172,7 +174,7 @@ class _FilterEditorDialog:
         dlg.grab_set()
 
         w, h = 540, 560
-        px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
+        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
@@ -273,7 +275,7 @@ class _LocationExclusionDialog:
         dlg.grab_set()
 
         w, h = 400, 320
-        px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
+        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
@@ -344,7 +346,7 @@ class _SchedulerDialog:
         dlg.grab_set()
 
         w, h = 400, 330
-        px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
+        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
@@ -367,7 +369,8 @@ class _SchedulerDialog:
                 activebackground=BG, selectcolor=BG, cursor="hand2",
             ).pack(side=tk.LEFT, padx=(0, 4))
 
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(fill=tk.X, pady=(8, 0), **pad)
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, pady=(8, 0), **pad)
 
         # ── Interval ──────────────────────────────────────────────────────
         tk.Label(dlg, text="Repeat interval", font=(FONT, 9, "bold"), fg=SUBTEXT, bg=BG).pack(
@@ -375,17 +378,21 @@ class _SchedulerDialog:
 
         interval_frame = tk.Frame(dlg, bg=BG)
         interval_frame.pack(anchor="w", **pad)
-        tk.Label(interval_frame, text="Every", font=(FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
-        self._interval_var = tk.StringVar(value=str(config.get("interval_weeks", 1)))
+        tk.Label(interval_frame, text="Every", font=(
+            FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+        self._interval_var = tk.StringVar(
+            value=str(config.get("interval_weeks", 1)))
         tk.Spinbox(
             interval_frame, textvariable=self._interval_var,
             from_=1, to=52, width=4,
             font=(FONT, 10), relief=tk.FLAT,
             highlightbackground=SEP_COLOR, highlightthickness=1,
         ).pack(side=tk.LEFT, padx=6)
-        tk.Label(interval_frame, text="week(s)", font=(FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+        tk.Label(interval_frame, text="week(s)", font=(
+            FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
 
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(fill=tk.X, pady=(8, 0), **pad)
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, pady=(8, 0), **pad)
 
         # ── Time ──────────────────────────────────────────────────────────
         tk.Label(dlg, text="Time  (24 h, Europe/Zurich)", font=(FONT, 9, "bold"), fg=SUBTEXT, bg=BG).pack(
@@ -393,15 +400,17 @@ class _SchedulerDialog:
 
         time_frame = tk.Frame(dlg, bg=BG)
         time_frame.pack(anchor="w", **pad)
-        self._hour_var   = tk.StringVar(value=f"{config.get('hour',   13):02d}")
-        self._minute_var = tk.StringVar(value=f"{config.get('minute',  0):02d}")
+        self._hour_var = tk.StringVar(value=f"{config.get('hour',   13):02d}")
+        self._minute_var = tk.StringVar(
+            value=f"{config.get('minute',  0):02d}")
         tk.Spinbox(
             time_frame, textvariable=self._hour_var,
             values=[f"{h:02d}" for h in range(24)], width=4,
             font=(FONT, 11), relief=tk.FLAT,
             highlightbackground=SEP_COLOR, highlightthickness=1,
         ).pack(side=tk.LEFT)
-        tk.Label(time_frame, text=" : ", font=(FONT, 11, "bold"), fg=TEXT, bg=BG).pack(side=tk.LEFT)
+        tk.Label(time_frame, text=" : ", font=(FONT, 11, "bold"),
+                 fg=TEXT, bg=BG).pack(side=tk.LEFT)
         tk.Spinbox(
             time_frame, textvariable=self._minute_var,
             values=[f"{m:02d}" for m in range(0, 60, 5)], width=4,
@@ -428,14 +437,16 @@ class _SchedulerDialog:
     def _save(self, dlg: tk.Toplevel) -> None:
         days = [i for i, v in enumerate(self._day_vars) if v.get()]
         if not days:
-            messagebox.showwarning("Scheduler", "Select at least one day.", parent=dlg)
+            messagebox.showwarning(
+                "Scheduler", "Select at least one day.", parent=dlg)
             return
         try:
             interval = max(1, int(self._interval_var.get()))
-            hour     = int(self._hour_var.get())
-            minute   = int(self._minute_var.get())
+            hour = int(self._hour_var.get())
+            minute = int(self._minute_var.get())
         except ValueError:
-            messagebox.showwarning("Scheduler", "Invalid time or interval value.", parent=dlg)
+            messagebox.showwarning(
+                "Scheduler", "Invalid time or interval value.", parent=dlg)
             return
         from datetime import date
         self._result = {
@@ -470,7 +481,7 @@ class _CountriesDialog:
         dlg.grab_set()
 
         w, h = 360, 420
-        px = parent.winfo_rootx() + (parent.winfo_width()  - w) // 2
+        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
 
@@ -508,7 +519,8 @@ class _CountriesDialog:
                 padx=10, pady=3, cursor="hand2",
             ).pack(side=tk.LEFT, padx=(0, 6))
 
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(fill=tk.X, padx=16, pady=(0, 8))
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, padx=16, pady=(0, 8))
 
         # ── Checkboxes — 2 columns ────────────────────────────────────────
         grid = tk.Frame(dlg, bg=BG)
@@ -525,7 +537,8 @@ class _CountriesDialog:
                 anchor="w", cursor="hand2",
             ).grid(row=row, column=col, sticky="w", padx=(0, 20), pady=2)
 
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(fill=tk.X, padx=16, pady=(8, 6))
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, padx=16, pady=(8, 6))
 
         # ── Note ─────────────────────────────────────────────────────────
         tk.Label(
@@ -562,6 +575,246 @@ class _CountriesDialog:
 
 
 # ---------------------------------------------------------------------------
+# Application tracker dialog
+# ---------------------------------------------------------------------------
+
+class _AppTrackerDialog:
+    """
+    Dialog for viewing and updating application statuses.
+    Shows all tracked jobs with editable status dropdowns, plus a form to
+    add/update a job by pasting its URL.
+    """
+
+    def __init__(self, parent: tk.Tk) -> None:
+        import application_tracker as _at
+        from config import OUTPUT_DIR
+        self._at = _at
+        self._dir = OUTPUT_DIR
+
+        dlg = tk.Toplevel(parent)
+        dlg.title("Application Tracker")
+        dlg.configure(bg=BG)
+        dlg.resizable(True, True)
+        dlg.grab_set()
+
+        pad = {"padx": 16, "pady": 6}
+
+        # ── Tracked jobs section ─────────────────────────────────────────
+        tk.Label(
+            dlg, text="Tracked Applications",
+            font=(FONT, 10, "bold"), fg=DARK_BLUE, bg=BG,
+        ).pack(anchor="w", padx=16, pady=(12, 4))
+
+        list_frame = tk.Frame(dlg, bg=BG, bd=1, relief=tk.SOLID,
+                              highlightbackground=SEP_COLOR)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 4))
+
+        canvas = tk.Canvas(list_frame, bg=BG, highlightthickness=0, height=220)
+        sb = ttk.Scrollbar(list_frame, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=sb.set)
+        sb.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self._inner = tk.Frame(canvas, bg=BG)
+        self._inner_id = canvas.create_window(
+            (0, 0), window=self._inner, anchor="nw")
+
+        def _on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+            canvas.itemconfig(self._inner_id, width=canvas.winfo_width())
+
+        self._inner.bind("<Configure>", _on_configure)
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(
+            self._inner_id, width=e.width))
+
+        self._status_vars: dict[str, tk.StringVar] = {}
+        self._dlg = dlg
+        self._canvas = canvas
+        self._refresh_list()
+
+        # ── Add / Update section ─────────────────────────────────────────
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, padx=16, pady=(4, 0))
+
+        tk.Label(
+            dlg, text="Add / Update by URL",
+            font=(FONT, 10, "bold"), fg=DARK_BLUE, bg=BG,
+        ).pack(anchor="w", **pad)
+
+        form = tk.Frame(dlg, bg=BG)
+        form.pack(fill=tk.X, padx=16, pady=(0, 4))
+        form.columnconfigure(1, weight=1)
+
+        for row_i, label in enumerate(("URL", "Job Title", "Company")):
+            tk.Label(form, text=label, font=(FONT, 9), fg=SUBTEXT, bg=BG,
+                     width=9, anchor="e").grid(row=row_i, column=0, sticky="e", pady=2)
+
+        self._url_var = tk.StringVar()
+        self._title_var = tk.StringVar()
+        self._company_var = tk.StringVar()
+
+        tk.Entry(form, textvariable=self._url_var,     font=(FONT, 9), bg="white",
+                 relief=tk.SOLID, bd=1).grid(row=0, column=1, sticky="ew", padx=(6, 0), pady=2)
+        tk.Entry(form, textvariable=self._title_var,   font=(FONT, 9), bg="white",
+                 relief=tk.SOLID, bd=1).grid(row=1, column=1, sticky="ew", padx=(6, 0), pady=2)
+        tk.Entry(form, textvariable=self._company_var, font=(FONT, 9), bg="white",
+                 relief=tk.SOLID, bd=1).grid(row=2, column=1, sticky="ew", padx=(6, 0), pady=2)
+
+        status_row = tk.Frame(form, bg=BG)
+        status_row.grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 2))
+        tk.Label(status_row, text="Status", font=(FONT, 9), fg=SUBTEXT, bg=BG,
+                 width=9, anchor="e").pack(side=tk.LEFT)
+
+        self._new_status_var = tk.StringVar(value=_at.STATUSES[0])
+        ttk.Combobox(
+            status_row, textvariable=self._new_status_var,
+            values=_at.STATUSES, state="readonly", width=16, font=(FONT, 9),
+        ).pack(side=tk.LEFT, padx=(6, 8))
+
+        tk.Button(
+            status_row, text="Save",
+            command=self._save_new,
+            font=(FONT, 9, "bold"), bg=DARK_BLUE, fg="white",
+            activebackground=MID_BLUE, activeforeground="white",
+            relief=tk.FLAT, padx=12, pady=3, cursor="hand2", bd=0,
+        ).pack(side=tk.LEFT)
+
+        # ── Bottom buttons ───────────────────────────────────────────────
+        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
+            fill=tk.X, padx=16, pady=(4, 0))
+
+        btn_row = tk.Frame(dlg, bg=BG)
+        btn_row.pack(fill=tk.X, padx=16, pady=(6, 12))
+
+        tk.Button(
+            btn_row, text="Remove Selected",
+            command=self._remove_selected,
+            font=(FONT, 9), bg="#C00000", fg="white",
+            activebackground="#8B0000", activeforeground="white",
+            relief=tk.FLAT, padx=10, pady=3, cursor="hand2", bd=0,
+        ).pack(side=tk.LEFT)
+
+        tk.Button(
+            btn_row, text="Close",
+            command=dlg.destroy,
+            font=(FONT, 9, "bold"), bg="#546E7A", fg="white",
+            activebackground="#3D5A66", activeforeground="white",
+            relief=tk.FLAT, padx=14, pady=3, cursor="hand2", bd=0,
+        ).pack(side=tk.RIGHT)
+
+        dlg.update_idletasks()
+        w, h = 560, 520
+        x = parent.winfo_x() + (parent.winfo_width() - w) // 2
+        y = parent.winfo_y() + (parent.winfo_height() - h) // 2
+        dlg.geometry(f"{w}x{h}+{x}+{y}")
+        dlg.minsize(420, 360)
+
+    # ── Internal helpers ─────────────────────────────────────────────────
+
+    def _refresh_list(self) -> None:
+        """Rebuild the scrollable rows from applications.json."""
+        for widget in self._inner.winfo_children():
+            widget.destroy()
+        self._status_vars.clear()
+        self._selected_url: str | None = None
+
+        apps = self._at.load(self._dir)
+        if not apps:
+            tk.Label(
+                self._inner, text="No applications tracked yet.",
+                font=(FONT, 9), fg=SUBTEXT, bg=BG,
+            ).pack(anchor="w", padx=8, pady=8)
+            return
+
+        # Column headers
+        hdr = tk.Frame(self._inner, bg=SEP_COLOR)
+        hdr.pack(fill=tk.X, padx=4, pady=(2, 0))
+        for text, width in (("Company", 16), ("Job Title", 28), ("Status", 14), ("Updated", 10)):
+            tk.Label(hdr, text=text, font=(FONT, 8, "bold"), fg=DARK_BLUE, bg=SEP_COLOR,
+                     width=width, anchor="w").pack(side=tk.LEFT, padx=2)
+
+        self._row_vars: list[tuple[str, tk.BooleanVar]] = []
+
+        STATUS_COLORS = {
+            "Applied": "#BDD7EE", "Interviewing": "#FFE4B5",
+            "Offer": "#C6EFCE",   "Accepted": "#90EE90",
+            "Rejected": "#F2F2F2", "Withdrawn": "#F2F2F2",
+            "Saved": "#E2EFDA",
+        }
+
+        for url, info in sorted(apps.items(), key=lambda x: x[1].get("company", "").lower()):
+            company = info.get("company", "")
+            title = info.get("title",   "")
+            status = info.get("status",  "")
+            updated = info.get("updated", "")
+            row_bg = STATUS_COLORS.get(status, BG)
+
+            row = tk.Frame(self._inner, bg=row_bg, cursor="hand2")
+            row.pack(fill=tk.X, padx=4, pady=1)
+
+            sel_var = tk.BooleanVar(value=False)
+            self._row_vars.append((url, sel_var))
+
+            tk.Checkbutton(row, variable=sel_var, bg=row_bg,
+                           activebackground=row_bg).pack(side=tk.LEFT, padx=(2, 0))
+            tk.Label(row, text=company[:18], font=(FONT, 9), fg=TEXT, bg=row_bg,
+                     width=14, anchor="w").pack(side=tk.LEFT, padx=2)
+            tk.Label(row, text=title[:32], font=(FONT, 9), fg=TEXT, bg=row_bg,
+                     width=26, anchor="w").pack(side=tk.LEFT, padx=2)
+
+            sv = tk.StringVar(value=status)
+            self._status_vars[url] = sv
+
+            def _on_change(u=url, v=sv, bg_lbl=row):
+                self._at.set_status(self._dir, u, v.get())
+                new_bg = STATUS_COLORS.get(v.get(), BG)
+                for child in bg_lbl.winfo_children():
+                    try:
+                        child.config(bg=new_bg)
+                    except tk.TclError:
+                        pass
+                bg_lbl.config(bg=new_bg)
+
+            cb = ttk.Combobox(row, textvariable=sv, values=self._at.STATUSES,
+                              state="readonly", width=13, font=(FONT, 9))
+            cb.pack(side=tk.LEFT, padx=2)
+            cb.bind("<<ComboboxSelected>>", lambda _e,
+                    u=url, v=sv, b=row: _on_change(u, v, b))
+
+            tk.Label(row, text=updated, font=(FONT, 8), fg=SUBTEXT, bg=row_bg,
+                     width=10, anchor="w").pack(side=tk.LEFT, padx=2)
+
+    def _save_new(self) -> None:
+        url = self._url_var.get().strip()
+        title = self._title_var.get().strip()
+        company = self._company_var.get().strip()
+        status = self._new_status_var.get()
+        if not url:
+            messagebox.showwarning(
+                "Missing URL", "Paste the job URL to track.", parent=self._dlg)
+            return
+        self._at.set_status(self._dir, url, status,
+                            title=title, company=company)
+        self._url_var.set("")
+        self._title_var.set("")
+        self._company_var.set("")
+        self._refresh_list()
+
+    def _remove_selected(self) -> None:
+        to_remove = [url for url, var in self._row_vars if var.get()]
+        if not to_remove:
+            messagebox.showinfo("Nothing selected", "Tick the checkbox next to entries to remove.",
+                                parent=self._dlg)
+            return
+        if not messagebox.askyesno("Confirm", f"Remove {len(to_remove)} entry/entries?",
+                                   parent=self._dlg):
+            return
+        for url in to_remove:
+            self._at.remove(self._dir, url)
+        self._refresh_list()
+
+
+# ---------------------------------------------------------------------------
 # Main application
 # ---------------------------------------------------------------------------
 class JobHunterApp:
@@ -574,14 +827,15 @@ class JobHunterApp:
             SEARCH_KEYWORDS,
             SWISS_SEARCH_KEYWORDS,
         )
-        self._keywords: list[str]       = list(SEARCH_KEYWORDS)
+        self._keywords: list[str] = list(SEARCH_KEYWORDS)
         self._swiss_keywords: list[str] = list(SWISS_SEARCH_KEYWORDS)
         self._cv_path: str | None = None
         self._cv_suggestions: list[str] = []
         self._countries: list[str] = ["Switzerland"]
-        self._prefilter_required: list[str]  = list(PREFILTER_REQUIRED)
-        self._prefilter_excluded: list[str]  = list(PREFILTER_EXCLUDED_TITLE)
-        self._excluded_locations: list[str]  = list(PREFILTER_EXCLUDED_LOCATIONS)
+        self._prefilter_required: list[str] = list(PREFILTER_REQUIRED)
+        self._prefilter_excluded: list[str] = list(PREFILTER_EXCLUDED_TITLE)
+        self._excluded_locations: list[str] = list(
+            PREFILTER_EXCLUDED_LOCATIONS)
         self._scheduler_config: dict = {
             "enabled": False, "days": [0, 2, 4],
             "interval_weeks": 1, "hour": 13, "minute": 0, "start_date": None,
@@ -601,8 +855,8 @@ class JobHunterApp:
         self._update_scheduler_badge()
 
         self.root.update_idletasks()
-        w, h = 490, 730
-        x = (self.root.winfo_screenwidth()  - w) // 2
+        w, h = 490, 750
+        x = (self.root.winfo_screenwidth() - w) // 2
         y = (self.root.winfo_screenheight() - h) // 2
         self.root.geometry(f"{w}x{h}+{x}+{y}")
 
@@ -630,8 +884,8 @@ class JobHunterApp:
             highlightbackground=SEP_COLOR, highlightthickness=1,
         )
         lbl.bind("<Button-1>", lambda _e: command())
-        lbl.bind("<Enter>",    lambda _e: lbl.config(fg=MID_BLUE))
-        lbl.bind("<Leave>",    lambda _e: lbl.config(fg=DARK_BLUE))
+        lbl.bind("<Enter>", lambda _e: lbl.config(fg=MID_BLUE))
+        lbl.bind("<Leave>", lambda _e: lbl.config(fg=DARK_BLUE))
         return lbl
 
     def _outline_btn(self, parent, text, command, **kw) -> tk.Button:
@@ -674,7 +928,8 @@ class JobHunterApp:
             font=(FONT, 9), fg=SUBTEXT, bg=BG, anchor="w",
         )
         self._cv_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._outline_btn(cv_row, "Browse CV…", self._browse_cv).pack(side=tk.RIGHT)
+        self._outline_btn(cv_row, "Browse CV…",
+                          self._browse_cv).pack(side=tk.RIGHT)
 
         kw_row = tk.Frame(body, bg=BG)
         kw_row.pack(fill=tk.X, pady=(0, 2))
@@ -683,7 +938,8 @@ class JobHunterApp:
             font=(FONT, 9), fg=SUBTEXT, bg=BG, anchor="w",
         )
         self._kw_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._outline_btn(kw_row, "Edit Keywords…", self._open_keyword_editor).pack(side=tk.RIGHT)
+        self._outline_btn(kw_row, "Edit Keywords…",
+                          self._open_keyword_editor).pack(side=tk.RIGHT)
 
         filt_row = tk.Frame(body, bg=BG)
         filt_row.pack(fill=tk.X, pady=(0, 2))
@@ -692,30 +948,35 @@ class JobHunterApp:
             font=(FONT, 9), fg=SUBTEXT, bg=BG, anchor="w",
         )
         self._filter_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._outline_btn(filt_row, "Edit Filters…", self._open_filter_editor).pack(side=tk.RIGHT)
+        self._outline_btn(filt_row, "Edit Filters…",
+                          self._open_filter_editor).pack(side=tk.RIGHT)
 
         # ── Search Area ───────────────────────────────────────────────────
         self._section_label(body, "Search Area")
 
         ct_row = tk.Frame(body, bg=BG)
         ct_row.pack(fill=tk.X, pady=(0, 2))
-        tk.Label(ct_row, text="Countries:", font=(FONT, 10), fg=TEXT, bg=BG, width=10, anchor="w").pack(side=tk.LEFT)
+        tk.Label(ct_row, text="Countries:", font=(FONT, 10), fg=TEXT,
+                 bg=BG, width=10, anchor="w").pack(side=tk.LEFT)
         self._countries_label = tk.Label(
             ct_row, text=self._countries_summary(),
             font=(FONT, 9), fg=SUBTEXT, bg=BG, anchor="w",
         )
         self._countries_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._outline_btn(ct_row, "Edit…", self._open_countries_dialog).pack(side=tk.RIGHT)
+        self._outline_btn(
+            ct_row, "Edit…", self._open_countries_dialog).pack(side=tk.RIGHT)
 
         excl_row = tk.Frame(body, bg=BG)
         excl_row.pack(fill=tk.X, pady=(0, 2))
-        tk.Label(excl_row, text="Excluded locs.:", font=(FONT, 10), fg=TEXT, bg=BG, width=14, anchor="w").pack(side=tk.LEFT)
+        tk.Label(excl_row, text="Excluded locs.:", font=(FONT, 10),
+                 fg=TEXT, bg=BG, width=14, anchor="w").pack(side=tk.LEFT)
         self._excl_loc_label = tk.Label(
             excl_row, text=self._location_excl_summary(),
             font=(FONT, 9), fg=SUBTEXT, bg=BG, anchor="w",
         )
         self._excl_loc_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-        self._outline_btn(excl_row, "Edit…", self._open_location_exclusion_editor).pack(side=tk.RIGHT)
+        self._outline_btn(
+            excl_row, "Edit…", self._open_location_exclusion_editor).pack(side=tk.RIGHT)
 
         # ── Options ───────────────────────────────────────────────────────
         self._section_label(body, "Options")
@@ -801,13 +1062,14 @@ class JobHunterApp:
         self.open_btn.grid(row=0, column=0, sticky="w")
 
         tk.Button(
-            excel_row, text="📂  Open Previous…",
+            excel_row, text="📂  Open Previous",
             command=self._open_previous_excel,
             font=(FONT, 10, "bold"),
             bg="#546E7A", fg="white",
             activebackground="#3D5A66", activeforeground="white",
             disabledforeground="#B0C8D0",
             relief=tk.FLAT, padx=18, pady=6, cursor="hand2", bd=0,
+            width=14,
         ).grid(row=0, column=1)
 
         self.pdf_btn = tk.Button(
@@ -821,6 +1083,16 @@ class JobHunterApp:
             state=tk.DISABLED, cursor="arrow", bd=0,
         )
         self.pdf_btn.grid(row=0, column=2, sticky="e")
+
+        tk.Button(
+            excel_row, text="📋  App. Tracker",
+            command=lambda: _AppTrackerDialog(self.root),
+            font=(FONT, 10, "bold"),
+            bg="#5C4B8A", fg="white",
+            activebackground="#3D3060", activeforeground="white",
+            relief=tk.FLAT, padx=18, pady=6, cursor="hand2", bd=0,
+            width=14,
+        ).grid(row=1, column=1, pady=(4, 0))
 
         self._last_run_label = tk.Label(
             body, text=self._load_last_run_text(),
@@ -905,7 +1177,8 @@ class JobHunterApp:
             return "—"
         day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         days = cfg.get("days", [])
-        days_str = "/".join(day_names[d] for d in sorted(days)) if days else "—"
+        days_str = "/".join(day_names[d]
+                            for d in sorted(days)) if days else "—"
         h, m = cfg.get("hour", 13), cfg.get("minute", 0)
         n = cfg.get("interval_weeks", 1)
         freq = f" · ×{n}wk" if n > 1 else ""
@@ -923,13 +1196,15 @@ class JobHunterApp:
         if not path:
             return
         self._cv_path = path
-        self._cv_label.config(text=f"Loading {os.path.basename(path)}…", fg=SUBTEXT)
-        threading.Thread(target=self._extract_cv, args=(path,), daemon=True).start()
+        self._cv_label.config(
+            text=f"Loading {os.path.basename(path)}…", fg=SUBTEXT)
+        threading.Thread(target=self._extract_cv,
+                         args=(path,), daemon=True).start()
 
     def _extract_cv(self, path: str) -> None:
         try:
             from cv_extractor import extract_text, suggest_keywords
-            text        = extract_text(path)
+            text = extract_text(path)
             suggestions = suggest_keywords(text)
             self._cv_suggestions = suggestions
             self.root.after(0, self._on_cv_done, path, len(suggestions))
@@ -991,7 +1266,8 @@ class JobHunterApp:
             self._apply_scheduler()
             self._update_scheduler_badge()
             active = self._scheduler_config.get("enabled", False)
-            self._deactivate_btn.config(state=tk.NORMAL if active else tk.DISABLED)
+            self._deactivate_btn.config(
+                state=tk.NORMAL if active else tk.DISABLED)
 
     def _deactivate_scheduler(self) -> None:
         self._scheduler_config["enabled"] = False
@@ -1001,7 +1277,7 @@ class JobHunterApp:
 
     def _update_scheduler_badge(self) -> None:
         active = self._scheduler_config.get("enabled", False)
-        text   = self._scheduler_summary()
+        text = self._scheduler_summary()
         if active:
             self._scheduler_status_label.config(
                 text=f"  {text}  ",
@@ -1037,18 +1313,18 @@ class JobHunterApp:
         from config import SCHEDULE_TIMEZONE
 
         day_abbrs = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-        days_str  = ",".join(day_abbrs[d] for d in sorted(days))
-        interval  = cfg.get("interval_weeks", 1)
+        days_str = ",".join(day_abbrs[d] for d in sorted(days))
+        interval = cfg.get("interval_weeks", 1)
         start_iso = cfg.get("start_date")
 
         def _scheduled_job() -> None:
             if interval > 1 and start_iso:
                 from datetime import date, timedelta
-                today          = date.today()
-                start          = date.fromisoformat(start_iso)
-                start_monday   = start   - timedelta(days=start.weekday())
-                current_monday = today   - timedelta(days=today.weekday())
-                weeks_elapsed  = (current_monday - start_monday).days // 7
+                today = date.today()
+                start = date.fromisoformat(start_iso)
+                start_monday = start - timedelta(days=start.weekday())
+                current_monday = today - timedelta(days=today.weekday())
+                weeks_elapsed = (current_monday - start_monday).days // 7
                 if weeks_elapsed % interval != 0:
                     return
             # Don't start a new run while one is already in progress
@@ -1095,7 +1371,8 @@ class JobHunterApp:
         from config import OUTPUT_DIR
         history_path = os.path.join(OUTPUT_DIR, "seen_jobs_history.json")
         if not os.path.isfile(history_path):
-            messagebox.showinfo("Clear History", "No history file found — already clear.")
+            messagebox.showinfo(
+                "Clear History", "No history file found — already clear.")
             return
         if messagebox.askyesno(
             "Clear History",
@@ -1108,7 +1385,8 @@ class JobHunterApp:
                     fg=SUBTEXT,
                 )
             except Exception as exc:
-                messagebox.showerror("Error", f"Could not delete history:\n{exc}")
+                messagebox.showerror(
+                    "Error", f"Could not delete history:\n{exc}")
 
     # ------------------------------------------------------------------
     # Run controls
@@ -1148,7 +1426,8 @@ class JobHunterApp:
     def _cancel_run(self) -> None:
         self._cancel_event.set()
         self.start_btn.config(state=tk.DISABLED, text="  Cancelling…")
-        self.status_label.config(text="Cancelling — finishing current source, then exporting…", fg=SUBTEXT)
+        self.status_label.config(
+            text="Cancelling — finishing current source, then exporting…", fg=SUBTEXT)
 
     def _open_excel(self) -> None:
         if self.output_path and os.path.exists(self.output_path):
@@ -1198,7 +1477,8 @@ class JobHunterApp:
         try:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            messagebox.showinfo("Saved", f"Settings saved:\n{os.path.basename(path)}")
+            messagebox.showinfo(
+                "Saved", f"Settings saved:\n{os.path.basename(path)}")
         except Exception as exc:
             messagebox.showerror("Save Error", str(exc))
 
@@ -1215,7 +1495,8 @@ class JobHunterApp:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except Exception as exc:
-            messagebox.showerror("Load Error", f"Could not read settings:\n{exc}")
+            messagebox.showerror(
+                "Load Error", f"Could not read settings:\n{exc}")
             return
 
         if isinstance(data.get("keywords"), list):
@@ -1243,7 +1524,8 @@ class JobHunterApp:
             self._apply_scheduler()
             self._update_scheduler_badge()
             active = self._scheduler_config.get("enabled", False)
-            self._deactivate_btn.config(state=tk.NORMAL if active else tk.DISABLED)
+            self._deactivate_btn.config(
+                state=tk.NORMAL if active else tk.DISABLED)
 
         name = data.get("name") or os.path.splitext(os.path.basename(path))[0]
         self.status_label.config(text=f"Settings loaded: {name}", fg=SUBTEXT)
@@ -1279,7 +1561,8 @@ class JobHunterApp:
                 prefilter_excluded_locations_override=excluded_locations,
                 cancel_event=self._cancel_event,
             )
-            path, new_count, stats = result if isinstance(result, tuple) and len(result) == 3 else (result, None, None)
+            path, new_count, stats = result if isinstance(
+                result, tuple) and len(result) == 3 else (result, None, None)
 
             pdf_path = None
             if path:
@@ -1292,7 +1575,8 @@ class JobHunterApp:
                         pdf_path = path.replace(".xlsx", ".pdf")
                         generate_pdf(jobs, pdf_path, stats=stats)
                 except Exception as pdf_exc:
-                    logging.getLogger(__name__).warning("PDF generation failed: %s", pdf_exc)
+                    logging.getLogger(__name__).warning(
+                        "PDF generation failed: %s", pdf_exc)
 
             self.root.after(0, self._on_complete, path, new_count, pdf_path)
         except Exception as exc:
@@ -1327,16 +1611,18 @@ class JobHunterApp:
         if output_path:
             self.output_path = output_path
             self._pdf_path = pdf_path
-            name      = os.path.basename(output_path)
+            name = os.path.basename(output_path)
             new_label = f"  —  {new_count} new" if new_count is not None else ""
-            self.status_label.config(text=f"✓  Saved: {name}{new_label}", fg=GREEN)
+            self.status_label.config(
+                text=f"✓  Saved: {name}{new_label}", fg=GREEN)
             self.open_btn.config(state=tk.NORMAL, cursor="hand2")
             if pdf_path and os.path.exists(pdf_path):
                 self.pdf_btn.config(state=tk.NORMAL, cursor="hand2")
             self._save_last_run(new_count)
             self._last_run_label.config(text=self._load_last_run_text())
         else:
-            self.status_label.config(text="Run complete — no jobs found.", fg=SUBTEXT)
+            self.status_label.config(
+                text="Run complete — no jobs found.", fg=SUBTEXT)
 
     def _on_error(self, msg: str) -> None:
         self._running = False
@@ -1359,10 +1645,10 @@ class JobHunterApp:
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            ts  = data.get("timestamp", "")
+            ts = data.get("timestamp", "")
             new = data.get("new_count")
             if ts:
-                dt     = datetime.fromisoformat(ts)
+                dt = datetime.fromisoformat(ts)
                 ts_str = dt.strftime("%d %b %H:%M")
                 new_str = f" — {new} new" if new is not None else ""
                 return f"Last run: {ts_str}{new_str}"

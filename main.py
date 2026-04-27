@@ -120,7 +120,8 @@ def run_job_scraper(
                          with exactly those countries when provided.
     """
     from ai_filter import filter_jobs
-    from excel_writer import load_previous_urls, write_excel
+    import application_tracker
+    from excel_writer import export_jobs_json, load_previous_urls, write_excel
 
     from config import (
         ENABLE_AI_SCORING,
@@ -402,7 +403,12 @@ def run_job_scraper(
     # ------------------------------------------------------------------ #
     _progress(96, "Writing Excel file…")
     previous_urls = load_previous_urls(OUTPUT_DIR)
-    output_path, new_count = write_excel(to_write, all_jobs=raw_jobs, previous_urls=previous_urls)
+    applications  = application_tracker.load(OUTPUT_DIR)
+    output_path, new_count = write_excel(
+        to_write, all_jobs=raw_jobs,
+        previous_urls=previous_urls, applications=applications,
+    )
+    export_jobs_json(to_write, output_path.replace(".xlsx", ".json"))
 
     if enable_ai_scoring:
         passed = sum(1 for j in to_write if j.get("relevance_score", 0) >= MIN_RELEVANCE_SCORE)
