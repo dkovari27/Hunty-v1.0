@@ -128,10 +128,7 @@ _OVERRIDES: dict[str, dict] = {
         "job_url_substr": ["/external/job/"],
     },
     # ─ Other ATS ─────────────────────────────────────────────────────────────
-    "careers.bachem.com": {
-        "search_url": "https://careers.bachem.com/search?q={keyword}",
-        "job_url_substr": ["/jobdetails/", "/job/"],
-    },
+    "careers.bachem.com": {"scraper": "skip"},
     "sobi.csod.com": {
         "search_url": "https://sobi.csod.com/ats/careersite/search.aspx?site=2&c=sobi&q={keyword}",
         "job_url_substr": ["/careersite/", "/ats/"],
