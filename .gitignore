@@ -23,6 +23,7 @@ outputs/*.log
 outputs/last_run.json
 
 # Personal / local-only
+config_personal.py
 settings/
 CV/
 output/

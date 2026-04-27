@@ -30,6 +30,11 @@ jobs:
       - name: Install Playwright browser
         run: playwright install chromium --with-deps
 
+      - name: Write personal config
+        run: echo "$CONFIG_PERSONAL" > config_personal.py
+        env:
+          CONFIG_PERSONAL: ${{ secrets.CONFIG_PERSONAL }}
+
       - name: Run scraper and email report
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
