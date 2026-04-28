@@ -124,6 +124,7 @@ def run_job_scraper(
     from excel_writer import export_jobs_json, load_previous_urls, write_excel
 
     from config import (
+        ENABLE_ACADEMICPOSITIONS,
         ENABLE_AI_SCORING,
         ENABLE_EXA,
         ENABLE_EUROPEAN,
@@ -162,6 +163,7 @@ def run_job_scraper(
         bool(ENABLE_JOBSCH and True),
         bool(ENABLE_EXA and EXA_API_KEY),
         bool(ENABLE_ORGCHEM),
+        bool(ENABLE_ACADEMICPOSITIONS),
         bool(run_swiss),
         bool(run_european),
     ])
@@ -282,7 +284,25 @@ def run_job_scraper(
         _source_times["organic-chemistry.org"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
-    # Source 6 — Swiss company career pages
+    # Source 6 — Academic Positions (academicpositions.com)
+    # ------------------------------------------------------------------ #
+    if ENABLE_ACADEMICPOSITIONS and not _is_cancelled():
+        _step += 1
+        _t0 = time.time()
+        _progress(43, f"[{_step}/{_total_sources}] Scraping academicpositions.com…")
+        from scrapers.academicpositions_scraper import scrape_academicpositions
+        ap_jobs = scrape_academicpositions(
+            keywords=keywords,
+            max_results=MAX_RESULTS_PER_KEYWORD,
+        )
+        raw_jobs.extend(ap_jobs)
+        logger.info("academicpositions.com: %d jobs", len(ap_jobs))
+        _progress(46, f"[{_step}/{_total_sources}] academicpositions.com: {len(ap_jobs)} jobs found")
+        _source_counts["academicpositions.com"] = len(ap_jobs)
+        _source_times["academicpositions.com"]  = time.time() - _t0
+
+    # ------------------------------------------------------------------ #
+    # Source 7 — Swiss company career pages
     # ------------------------------------------------------------------ #
     if run_swiss and not _is_cancelled():
         _step += 1

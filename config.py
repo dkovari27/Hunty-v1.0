@@ -33,11 +33,12 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Which job boards to scrape (toggle True / False)
 # ---------------------------------------------------------------------------
-ENABLE_INDEED   = False
-ENABLE_LINKEDIN = True
-ENABLE_JOBSCH   = True
-ENABLE_EXA      = True   # Exa semantic search (no domain restriction = company career pages)
-ENABLE_ORGCHEM  = True   # organic-chemistry.org/jobs/europe.htm
+ENABLE_INDEED             = False
+ENABLE_LINKEDIN           = True
+ENABLE_JOBSCH             = True
+ENABLE_EXA                = True   # Exa semantic search (no domain restriction = company career pages)
+ENABLE_ORGCHEM            = True   # organic-chemistry.org/jobs/europe.htm
+ENABLE_ACADEMICPOSITIONS  = False  # academicpositions.com — academic/research roles (Playwright)
 
 # ---------------------------------------------------------------------------
 # Search preferences (apply to all enabled sources)
