@@ -124,7 +124,6 @@ def run_job_scraper(
     from excel_writer import export_jobs_json, load_previous_urls, write_excel
 
     from config import (
-        ENABLE_ACADEMICPOSITIONS,
         ENABLE_AI_SCORING,
         ENABLE_EXA,
         ENABLE_EUROPEAN,
@@ -135,6 +134,9 @@ def run_job_scraper(
         EXA_API_KEY,
         HOURS_OLD,
     )
+    from scrapers.european._registry import get_site_status
+    _run_academicpositions = get_site_status("https://academicpositions.com").lower() != "skip"
+    _run_scholarshipdb     = get_site_status("https://scholarshipdb.net").lower() != "skip"
 
     if enable_ai_scoring is None:
         enable_ai_scoring = ENABLE_AI_SCORING
@@ -163,7 +165,8 @@ def run_job_scraper(
         bool(ENABLE_JOBSCH and True),
         bool(ENABLE_EXA and EXA_API_KEY),
         bool(ENABLE_ORGCHEM),
-        bool(ENABLE_ACADEMICPOSITIONS),
+        bool(_run_academicpositions),
+        bool(_run_scholarshipdb),
         bool(run_swiss),
         bool(run_european),
     ])
@@ -285,8 +288,9 @@ def run_job_scraper(
 
     # ------------------------------------------------------------------ #
     # Source 6 — Academic Positions (academicpositions.com)
+    # Toggle via Excel status column (set to "Skip" to disable)
     # ------------------------------------------------------------------ #
-    if ENABLE_ACADEMICPOSITIONS and not _is_cancelled():
+    if _run_academicpositions and not _is_cancelled():
         _step += 1
         _t0 = time.time()
         _progress(43, f"[{_step}/{_total_sources}] Scraping academicpositions.com…")
@@ -302,7 +306,26 @@ def run_job_scraper(
         _source_times["academicpositions.com"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
-    # Source 7 — Swiss company career pages
+    # Source 7 — ScholarshipDB (scholarshipdb.net)
+    # Toggle via Excel status column (set to "Skip" to disable)
+    # ------------------------------------------------------------------ #
+    if _run_scholarshipdb and not _is_cancelled():
+        _step += 1
+        _t0 = time.time()
+        _progress(47, f"[{_step}/{_total_sources}] Scraping scholarshipdb.net…")
+        from scrapers.scholarshipdb_scraper import scrape_scholarshipdb
+        sdb_jobs = scrape_scholarshipdb(
+            keywords=keywords,
+            max_results=MAX_RESULTS_PER_KEYWORD,
+        )
+        raw_jobs.extend(sdb_jobs)
+        logger.info("scholarshipdb.net: %d jobs", len(sdb_jobs))
+        _progress(50, f"[{_step}/{_total_sources}] scholarshipdb.net: {len(sdb_jobs)} jobs found")
+        _source_counts["scholarshipdb.net"] = len(sdb_jobs)
+        _source_times["scholarshipdb.net"]  = time.time() - _t0
+
+    # ------------------------------------------------------------------ #
+    # Source 8 — Swiss company career pages
     # ------------------------------------------------------------------ #
     if run_swiss and not _is_cancelled():
         _step += 1
@@ -325,7 +348,7 @@ def run_job_scraper(
         _source_times["Swiss Companies"]  = time.time() - _t0
 
     # ------------------------------------------------------------------ #
-    # Source 7 — European multi-country job boards
+    # Source 9 — European multi-country job boards
     # ------------------------------------------------------------------ #
     if run_european and not _is_cancelled():
         _step += 1

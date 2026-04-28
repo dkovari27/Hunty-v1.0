@@ -310,6 +310,26 @@ _OVERRIDES: dict[str, dict] = {
 }
 
 
+def get_site_status(site_url: str) -> str:
+    """
+    Return the Excel Status value ('Active', 'Skip', …) for a given site URL.
+    Matched by domain (e.g. 'https://academicpositions.com' → 'academicpositions.com').
+    Returns 'Active' if the site is not found in the spreadsheet.
+    """
+    from urllib.parse import urlparse as _up
+    target = _up(site_url).netloc or site_url.lower().strip()
+    wb = openpyxl.load_workbook(_EXCEL_PATH)
+    ws = wb.active
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        url = row[2] if len(row) > 2 else None
+        status = row[4] if len(row) > 4 else None
+        if not url:
+            continue
+        if _up(str(url)).netloc == target:
+            return str(status or "Active").strip()
+    return "Active"
+
+
 def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
     """
     Load all sites from the Excel file, merged with _OVERRIDES.

@@ -12,12 +12,21 @@ Card structure (div.list-group-item):
   a.job-link               — employer name
   div.job-locations a      — location parts
   text "Published …"       — posting date
+
+Deadline check:
+  After collecting from search pages, each detail page is fetched with plain
+  requests to read "Application deadline YYYY-MM-DD …" from the sidebar.
+  Jobs whose deadline has already passed are dropped.
 """
 from __future__ import annotations
 
 import logging
-import re
 import time
+
+import requests as _requests
+from bs4 import BeautifulSoup
+
+from scrapers._deadline_utils import is_expired, parse_deadline
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +34,19 @@ _BASE        = "https://academicpositions.com"
 _SEARCH_URL  = _BASE + "/find-jobs?keywords={keyword}&sort=recent&page={page}"
 _MAX_PAGES   = 3
 
+_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+}
+
 
 def _parse_html(html: str, keyword: str) -> list[dict]:
     """Parse rendered HTML and return job dicts."""
-    from bs4 import BeautifulSoup
-
     soup  = BeautifulSoup(html, "lxml")
     cards = soup.find_all("div", class_="list-group-item")
     jobs: list[dict] = []
@@ -84,6 +101,29 @@ def _parse_html(html: str, keyword: str) -> list[dict]:
     return jobs
 
 
+def _fetch_deadline(url: str, session: _requests.Session) -> str:
+    """
+    Fetch the AP job detail page and return the raw deadline string,
+    or "" if not found / on error.
+    Detail page is plain HTML — no Playwright needed.
+    """
+    try:
+        r = session.get(url, timeout=15)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "lxml")
+        for row in soup.find_all("div", class_="row"):
+            if "mb-3" not in row.get("class", []):
+                continue
+            label = row.find("div", class_="font-weight-bold")
+            if label and "application deadline" in label.get_text(strip=True).lower():
+                value_div = row.find("div", class_=lambda c: c and "col-auto" in c)
+                if value_div:
+                    return value_div.get_text(separator=" ", strip=True)
+    except Exception as exc:
+        logger.debug("  [academicpositions] deadline fetch error for %s: %s", url, exc)
+    return ""
+
+
 def scrape_academicpositions(
     keywords: list[str],
     max_results: int = 20,
@@ -91,6 +131,8 @@ def scrape_academicpositions(
     """
     Scrape academicpositions.com for each keyword.
     Uses Playwright (headless Chromium) — JS-rendered site.
+    After collecting, fetches each detail page to check the application
+    deadline and drops any jobs whose deadline has already passed.
     Returns deduplicated job dicts.
     """
     try:
@@ -116,11 +158,7 @@ def scrape_academicpositions(
             try:
                 browser = _get_thread_browser()
                 context = browser.new_context(
-                    user_agent=(
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/124.0.0.0 Safari/537.36"
-                    ),
+                    user_agent=_HEADERS["User-Agent"],
                     locale="en-US",
                     viewport={"width": 1280, "height": 900},
                 )
@@ -143,7 +181,7 @@ def scrape_academicpositions(
                 except Exception:
                     pass
 
-                html  = pw_page.content()
+                html = pw_page.content()
                 context.close()
 
             except Exception as exc:
@@ -169,7 +207,31 @@ def scrape_academicpositions(
             if kw_count >= max_results:
                 break
 
-        logger.debug("  [academicpositions] '%s': %d jobs", keyword, kw_count)
+        logger.debug("  [academicpositions] '%s': %d jobs collected", keyword, kw_count)
 
-    logger.info("academicpositions.com: %d jobs scraped", len(all_jobs))
-    return all_jobs
+    # ── Deadline filter ───────────────────────────────────────────────────────
+    session = _requests.Session()
+    session.headers.update(_HEADERS)
+
+    active: list[dict] = []
+    expired_count = 0
+
+    for job in all_jobs:
+        raw = _fetch_deadline(job["url"], session)
+        deadline = parse_deadline(raw)
+        if is_expired(deadline):
+            logger.debug(
+                "  [academicpositions] expired (%s): %s",
+                deadline, job["title"],
+            )
+            expired_count += 1
+        else:
+            job["deadline"] = str(deadline) if deadline else ""
+            active.append(job)
+        time.sleep(0.3)
+
+    logger.info(
+        "academicpositions.com: %d jobs (%d expired / no-deadline dropped)",
+        len(active), expired_count,
+    )
+    return active
