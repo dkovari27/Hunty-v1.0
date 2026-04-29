@@ -3,7 +3,7 @@ name: Hunty Job Scraper
 on:
   schedule:
     # Mon / Wed / Fri at 11:00 UTC = 13:00 CEST (summer) / 12:00 CET (winter)
-    - cron: '0 11 * * 1,3,5'
+    - cron: '0 6 * * 1-5'
   workflow_dispatch:   # allows manual trigger from GitHub UI
 
 jobs:
