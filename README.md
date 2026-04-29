@@ -1,3 +1,13 @@
+How to run Hunty:
+Go to the Actions tab at the top of the repo page
+In the left sidebar, click Hunty Job Scraper (the workflow name)
+On the right side, click the Run workflow dropdown button
+Leave the branch as main, click the green Run workflow button
+Refresh the page — a new run appears at the top with a yellow spinner; click it to watch the logs live
+
+
+
+
 How to get the perfect keyword filtering of your CV that can be easily pasted into Hunty:
 Copy the following text into any AI and add your CV to the message.
 
