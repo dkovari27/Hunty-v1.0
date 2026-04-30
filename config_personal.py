@@ -15,9 +15,13 @@ CONFIG_PERSONAL before running — see .github/workflows/hunty.yml.
 # Used for LinkedIn, Exa, organic-chemistry.org — specific phrases work best
 SEARCH_KEYWORDS = [
     "AI drug discovery chemist",
+    "AI machine learning cheminformatics",
+    "Cheminformatician pharmaceutical",
     "Cheminformatics scientist KNIME RDKit",
     "Computational medicinal chemist",
+    "Discovery informatics cheminformatics",
     "Drug design scientist pharmaceutical",
+    "Laboratory automation chemist",
     "Medicinal chemist drug discovery",
     "Research scientist medicinal chemistry CRO",
     "Small molecule drug discovery scientist",
