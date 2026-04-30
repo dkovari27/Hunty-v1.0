@@ -19,7 +19,7 @@ def main() -> None:
     """Run the full scrape → PDF → email pipeline for CI/scheduled execution."""
     logger.info("CI run starting")
 
-    result = run_job_scraper()
+    result = run_job_scraper(countries_override=["Switzerland"])
     if result is None:
         logger.info("No jobs scraped — nothing to send.")
         sys.exit(0)

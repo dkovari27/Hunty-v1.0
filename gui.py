@@ -1178,8 +1178,6 @@ class JobHunterApp:
         if include_postdoc:
             keywords = keywords + _POSTDOC_KEYWORDS
             swiss_keywords = swiss_keywords + _POSTDOC_SWISS_KEYWORDS
-        else:
-            excluded = excluded + ["postdoc", "postdoctoral", "post-doc", "post doc"]
 
         threading.Thread(
             target=self._run_pipeline,
@@ -1391,9 +1389,65 @@ class JobHunterApp:
                 self.pdf_btn.config(state=tk.NORMAL, cursor="hand2")
             self._save_last_run(new_count)
             self._last_run_label.config(text=self._load_last_run_text())
+            self._show_completion_popup(new_count, pdf_path)
         else:
             self.status_label.config(
                 text="Run complete — no jobs found.", fg=SUBTEXT)
+
+    def _show_completion_popup(self, new_count: int | None, pdf_path: str | None) -> None:
+        count_text = str(new_count) if new_count is not None else "0"
+        popup = tk.Toplevel(self.root)
+        popup.title("Search Complete")
+        popup.resizable(False, False)
+        popup.configure(bg=BG)
+        popup.grab_set()
+
+        # Centre over main window
+        self.root.update_idletasks()
+        x = self.root.winfo_x() + self.root.winfo_width() // 2 - 200
+        y = self.root.winfo_y() + self.root.winfo_height() // 2 - 70
+        popup.geometry(f"400x140+{x}+{y}")
+
+        tk.Label(
+            popup,
+            text="Your job search is complete!",
+            font=(FONT, 12, "bold"),
+            bg=BG, fg=DARK_BLUE,
+        ).pack(pady=(24, 4))
+
+        tk.Label(
+            popup,
+            text=f"{count_text} new job{'s' if count_text != '1' else ''} found.",
+            font=(FONT, 11),
+            bg=BG, fg=TEXT,
+        ).pack()
+
+        btn_frame = tk.Frame(popup, bg=BG)
+        btn_frame.pack(pady=(16, 0))
+
+        has_pdf = bool(pdf_path and os.path.exists(pdf_path))
+
+        def open_pdf():
+            popup.destroy()
+            if pdf_path and os.path.exists(pdf_path):
+                os.startfile(pdf_path)
+
+        if has_pdf:
+            tk.Button(
+                btn_frame, text="Open PDF",
+                font=(FONT, 10), bg=GREEN, fg="white",
+                activebackground="#1a5c38", activeforeground="white",
+                relief="flat", padx=18, pady=6, cursor="hand2",
+                command=open_pdf,
+            ).pack(side=tk.LEFT, padx=(0, 10))
+
+        tk.Button(
+            btn_frame, text="OK",
+            font=(FONT, 10), bg=DARK_BLUE, fg="white",
+            activebackground=MID_BLUE, activeforeground="white",
+            relief="flat", padx=18, pady=6, cursor="hand2",
+            command=popup.destroy,
+        ).pack(side=tk.LEFT)
 
     def _on_error(self, msg: str) -> None:
         self._running = False

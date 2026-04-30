@@ -83,6 +83,10 @@ def _prefilter(
     if excluded_locations is None:
         excluded_locations = PREFILTER_EXCLUDED_LOCATIONS
 
+    # When PostDoc mode is off, automatically exclude postdoc-titled jobs.
+    if not postdoc_mode:
+        excluded = list(excluded) + list(_POSTDOC_TERMS)
+
     kept = []
     for job in jobs:
         title    = job.get("title", "").lower()
