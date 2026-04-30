@@ -111,7 +111,7 @@ def _find_jobs(obj, depth: int = 0) -> list | None:
 
 
 def _extract_next_data(html: str) -> tuple[dict | None, str | None]:
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     tag = soup.find("script", id="__NEXT_DATA__")
     if not tag or not tag.string:
         return None, None
@@ -173,7 +173,7 @@ def _normalise(raw: dict, keyword: str, source: str, base_url: str) -> dict:
 def _scan_links(html: str, keyword: str, source: str,
                 base_url: str, job_url_substr: list[str]) -> list[dict]:
     """Find job postings by scanning for links whose href matches job_url_substr."""
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     jobs: list[dict] = []
     seen: set[str] = set()
 
@@ -339,6 +339,8 @@ def scrape_generic(
                 raw_jobs = _find_jobs(json_data)
                 if raw_jobs:
                     for raw in raw_jobs:
+                        if new_on_page >= max_results:
+                            break
                         job = _normalise(raw, keyword, site_name, base_url)
                         key = job["url"] or (job["title"].lower(), job["company"].lower())
                         if key and key not in seen_urls:
@@ -363,6 +365,8 @@ def scrape_generic(
                     or (job_url_substr and any(pat in j["url"] for pat in job_url_substr))
                 ]
                 for job in real_link_jobs:
+                    if new_on_page >= max_results:
+                        break
                     key = job["url"] or (job["title"].lower(), job["company"].lower())
                     if key and key not in seen_urls:
                         seen_urls.add(key)

@@ -13,6 +13,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ._coordinator import _MAX_WORKERS, _dispatch, _effective_keywords
+from ._playwright_scraper import cleanup_thread_playwright
 from ._registry import load_swiss_company_sites
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,11 @@ def scrape_swiss_companies(
 
             if added:
                 logger.info("  [%s] → %d unique jobs", site.name, added)
+
+        # Close Playwright browsers on every worker thread before the next
+        # scraper phase begins — prevents lingering Chromium processes.
+        for _ in range(_MAX_WORKERS):
+            executor.submit(cleanup_thread_playwright)
 
     logger.info("Swiss companies: %d total unique jobs", len(all_jobs))
     return all_jobs

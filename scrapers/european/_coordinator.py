@@ -9,14 +9,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from config import HOURS_OLD, MAX_RESULTS_PER_KEYWORD, RADIUS_MILES
 
+from ._playwright_scraper import cleanup_thread_playwright
 from ._registry import SiteConfig, load_sites
 
 logger = logging.getLogger(__name__)
 
 _RADIUS_KM = max(10, round(RADIUS_MILES * 1.609))
 
-# Number of sites scraped in parallel. Higher = faster but more RAM/CPU.
-_MAX_WORKERS = 8
+# Number of sites scraped in parallel. Capped at 4 to limit concurrent
+# Chromium instances when Playwright fallback fires across multiple sites.
+_MAX_WORKERS = 4
 
 
 def _effective_keywords(site: SiteConfig, keywords: list[str]) -> list[str]:
@@ -157,6 +159,10 @@ def scrape_european_sites(
 
             if added:
                 logger.info("  [%s] → %d unique jobs", site.name, added)
+
+        # Release Chromium processes before returning.
+        for _ in range(_MAX_WORKERS):
+            executor.submit(cleanup_thread_playwright)
 
     logger.info("European scraping complete — %d total unique jobs", len(all_jobs))
     return all_jobs

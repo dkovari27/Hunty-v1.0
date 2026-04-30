@@ -67,6 +67,27 @@ def _last_segment(url: str) -> str:
 
 logger = logging.getLogger(__name__)
 
+
+def cleanup_thread_playwright() -> None:
+    """Close the thread-local Playwright browser and stop the playwright instance.
+    Call this after a ThreadPoolExecutor block to release Chromium processes."""
+    browser = getattr(_thread_local, "browser", None)
+    if browser is not None:
+        try:
+            browser.close()
+        except Exception:
+            pass
+        _thread_local.browser = None
+
+    pw = getattr(_thread_local, "_pw", None)
+    if pw is not None:
+        try:
+            pw.stop()
+        except Exception:
+            pass
+        _thread_local._pw = None
+
+
 # Common GDPR / cookie-banner "accept" button selectors (tried in order)
 _COOKIE_SELECTORS = [
     "button#accept-all",
