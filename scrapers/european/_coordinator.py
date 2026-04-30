@@ -112,9 +112,11 @@ def scrape_european_sites(
     # tls-client-64.dll (bundled with python-jobspy) has a thread-safety bug:
     # calling scrape_jobs() from multiple threads simultaneously triggers a Go
     # runtime panic (exception 0x80000003) that kills the process.  LinkedIn
-    # already searches all of Europe, so the Indeed country scrapers add no
-    # unique value and are excluded here to prevent the crash.
-    sites = [s for s in sites if s.scraper != "jobspy_indeed"]
+    # already covers all of Europe, and jobspy may leave background threads alive
+    # after returning, so all jobspy-backed scrapers are excluded from this
+    # multi-threaded executor to prevent the crash.
+    _JOBSPY_SCRAPERS = {"jobspy_indeed", "jobspy_glassdoor"}
+    sites = [s for s in sites if s.scraper not in _JOBSPY_SCRAPERS]
 
     skipped = sum(1 for s in sites if s.scraper == "skip")
     active  = [s for s in sites if s.scraper != "skip"]
