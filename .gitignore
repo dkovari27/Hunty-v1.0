@@ -25,7 +25,6 @@ outputs/*.json
 !outputs/portals.yml
 
 # Personal / local-only
-config_personal.py
 settings/
 CV/
 *.lnk
