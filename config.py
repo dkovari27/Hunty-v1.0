@@ -71,6 +71,20 @@ ENABLE_EUROPEAN = False   # Set True to search across European job boards
 # Which countries to search. Use exact names from the Excel file, or [] for ALL.
 EUROPEAN_COUNTRIES = ["Switzerland"]
 
+# ---------------------------------------------------------------------------
+# Academic scrapers country filter (academicpositions.com, scholarshipdb.net)
+# Jobs whose location doesn't match any of these are dropped.
+# Includes Switzerland + all EU-27 + Nordic non-EU (Norway, Iceland).
+# ---------------------------------------------------------------------------
+ACADEMIC_COUNTRIES: list[str] = [
+    "Austria", "Belgium", "Bulgaria", "Croatia", "Cyprus",
+    "Czech Republic", "Czechia", "Denmark", "Estonia", "Finland",
+    "France", "Germany", "Greece", "Hungary", "Iceland", "Ireland",
+    "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta",
+    "Netherlands", "Norway", "Poland", "Portugal", "Romania",
+    "Slovakia", "Slovenia", "Spain", "Sweden", "Switzerland",
+]
+
 # Location anchor used for European searches (can differ from LOCATION above)
 EUROPEAN_LOCATION = LOCATION
 
@@ -81,13 +95,6 @@ EUROPEAN_LOCATION = LOCATION
 ENABLE_AI_SCORING = False
 MIN_RELEVANCE_SCORE = 6
 AI_MODEL = "claude-opus-4-6"
-
-# ---------------------------------------------------------------------------
-# Scheduler settings
-# ---------------------------------------------------------------------------
-SCHEDULE_HOUR = 8
-SCHEDULE_MINUTE = 0
-SCHEDULE_TIMEZONE = "Europe/Zurich"
 
 # ---------------------------------------------------------------------------
 # Output settings

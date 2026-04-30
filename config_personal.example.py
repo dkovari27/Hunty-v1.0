@@ -53,3 +53,9 @@ PREFILTER_EXCLUDED_TITLE = [
     "irrelevant role",
     "another role to exclude",
 ]
+
+# Jobs whose LOCATION contains any of these are dropped before AI scoring.
+# Set to [] to keep all locations.
+PREFILTER_EXCLUDED_LOCATIONS: list[str] = [
+    # "united states", "canada", ", ca,",
+]

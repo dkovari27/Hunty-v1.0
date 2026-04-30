@@ -8,7 +8,7 @@ Sources (toggle in config.py):
   organic-chemistry.org — European chemistry listings
 
 Run directly:   python main.py
-Run scheduled:  python scheduler.py
+Run scheduled:  python run_ci.py  (or via GitHub Actions cron)
 """
 import logging
 import os
@@ -20,10 +20,8 @@ from pathlib import Path
 from config import (
     EUROPEAN_COUNTRIES,
     EUROPEAN_LOCATION,
-    JOB_PROFILE,
     JOB_TYPE,
     MAX_RESULTS_PER_KEYWORD,
-    MIN_RELEVANCE_SCORE,
     OUTPUT_DIR,
     PREFILTER_EXCLUDED_LOCATIONS,
     PREFILTER_EXCLUDED_TITLE,
@@ -56,11 +54,15 @@ def setup_logging() -> None:
     )
 
 
+_POSTDOC_TERMS = ("postdoc", "postdoctoral", "post-doc", "post doc")
+
+
 def _prefilter(
     jobs: list[dict],
     required: list[str] | None = None,
     excluded: list[str] | None = None,
     excluded_locations: list[str] | None = None,
+    postdoc_mode: bool = False,
 ) -> list[dict]:
     """
     Fast keyword pre-filter — runs before the AI to cut API costs.
@@ -69,6 +71,9 @@ def _prefilter(
       - contain none of the required terms in title+description
         (only when required list is non-empty), OR
       - contain any excluded location term in the location field.
+
+    When postdoc_mode=True, jobs whose title contains a postdoc term bypass
+    the required-keyword check (exclusion and location filters still apply).
     Falls back to config values when override lists are None.
     """
     if required is None:
@@ -87,10 +92,15 @@ def _prefilter(
         if any(excl.lower() in title for excl in excluded):
             continue
 
-        if required and not any(req.lower() in body for req in required):
+        if excluded_locations and any(excl.lower() in location for excl in excluded_locations):
             continue
 
-        if excluded_locations and any(excl.lower() in location for excl in excluded_locations):
+        # PostDoc two-track: postdoc-titled jobs skip the required-keyword check.
+        if postdoc_mode and any(p in title for p in _POSTDOC_TERMS):
+            kept.append(job)
+            continue
+
+        if required and not any(req.lower() in body for req in required):
             continue
 
         kept.append(job)
@@ -108,6 +118,7 @@ def run_job_scraper(
     prefilter_excluded_override: list[str] | None = None,
     prefilter_excluded_locations_override: list[str] | None = None,
     cancel_event=None,
+    postdoc_mode: bool = False,
 ) -> tuple[str, int] | None:
     """
     Full pipeline: scrape → AI filter → Excel export.
@@ -124,6 +135,7 @@ def run_job_scraper(
     from excel_writer import export_jobs_json, load_previous_urls, write_excel
 
     from config import (
+        ACADEMIC_COUNTRIES,
         ENABLE_AI_SCORING,
         ENABLE_EXA,
         ENABLE_EUROPEAN,
@@ -133,10 +145,12 @@ def run_job_scraper(
         ENABLE_ORGCHEM,
         EXA_API_KEY,
         HOURS_OLD,
+        JOB_PROFILE,
+        MIN_RELEVANCE_SCORE,
     )
     from scrapers.european._registry import get_site_status
-    _run_academicpositions = get_site_status("https://academicpositions.com").lower() != "skip"
-    _run_scholarshipdb     = get_site_status("https://scholarshipdb.net").lower() != "skip"
+    _run_academicpositions = postdoc_mode and get_site_status("https://academicpositions.com").lower() != "skip"
+    _run_scholarshipdb     = postdoc_mode and get_site_status("https://scholarshipdb.net").lower() != "skip"
 
     if enable_ai_scoring is None:
         enable_ai_scoring = ENABLE_AI_SCORING
@@ -162,7 +176,7 @@ def run_job_scraper(
     _total_sources = sum([
         bool(ENABLE_INDEED),
         bool(ENABLE_LINKEDIN),
-        bool(ENABLE_JOBSCH and True),
+        bool(ENABLE_JOBSCH),
         bool(ENABLE_EXA and EXA_API_KEY),
         bool(ENABLE_ORGCHEM),
         bool(_run_academicpositions),
@@ -298,6 +312,7 @@ def run_job_scraper(
         ap_jobs = scrape_academicpositions(
             keywords=keywords,
             max_results=MAX_RESULTS_PER_KEYWORD,
+            countries=ACADEMIC_COUNTRIES,
         )
         raw_jobs.extend(ap_jobs)
         logger.info("academicpositions.com: %d jobs", len(ap_jobs))
@@ -317,6 +332,7 @@ def run_job_scraper(
         sdb_jobs = scrape_scholarshipdb(
             keywords=keywords,
             max_results=MAX_RESULTS_PER_KEYWORD,
+            countries=ACADEMIC_COUNTRIES,
         )
         raw_jobs.extend(sdb_jobs)
         logger.info("scholarshipdb.net: %d jobs", len(sdb_jobs))
@@ -415,6 +431,7 @@ def run_job_scraper(
         required=prefilter_required_override,
         excluded=prefilter_excluded_override,
         excluded_locations=prefilter_excluded_locations_override,
+        postdoc_mode=postdoc_mode,
     )
     logger.info(
         "Pre-filter: %d kept, %d dropped",

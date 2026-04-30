@@ -29,6 +29,16 @@ FONT = "Segoe UI"
 _SETTINGS_DIR = os.path.join(os.path.dirname(
     os.path.abspath(__file__)), "settings")
 
+_POSTDOC_KEYWORDS = [
+    "Postdoc cheminformatics medicinal chemistry",
+    "Postdoc medicinal chemistry synthesis",
+    "Postdoctoral researcher drug discovery",
+]
+_POSTDOC_SWISS_KEYWORDS = [
+    "postdoc",
+    "postdoctoral",
+]
+
 _ALL_COUNTRIES = [
     "Switzerland", "Germany", "United Kingdom", "Netherlands",
     "France", "Austria", "Belgium", "Denmark", "Sweden", "Norway",
@@ -324,143 +334,6 @@ class _LocationExclusionDialog:
 
     @property
     def result(self) -> list[str] | None:
-        return self._result
-
-
-# ---------------------------------------------------------------------------
-# Scheduler dialog
-# ---------------------------------------------------------------------------
-class _SchedulerDialog:
-    """Modal dialog for configuring the local background scheduler."""
-
-    _DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-    def __init__(self, parent: tk.Tk, config: dict):
-        self._result: dict | None = None
-
-        dlg = tk.Toplevel(parent)
-        dlg.title("Scheduler Settings")
-        dlg.configure(bg=BG)
-        dlg.resizable(False, False)
-        dlg.transient(parent)
-        dlg.grab_set()
-
-        w, h = 400, 330
-        px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
-        py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
-        dlg.geometry(f"{w}x{h}+{px}+{py}")
-
-        pad = dict(padx=20)
-
-        # ── Days ──────────────────────────────────────────────────────────
-        tk.Label(dlg, text="Days", font=(FONT, 9, "bold"), fg=SUBTEXT, bg=BG).pack(
-            anchor="w", pady=(14, 4), **pad)
-
-        days_frame = tk.Frame(dlg, bg=BG)
-        days_frame.pack(anchor="w", **pad)
-        selected_days = config.get("days", [0, 2, 4])
-        self._day_vars = []
-        for i, name in enumerate(self._DAY_NAMES):
-            var = tk.BooleanVar(value=(i in selected_days))
-            self._day_vars.append(var)
-            tk.Checkbutton(
-                days_frame, text=name, variable=var,
-                font=(FONT, 10), bg=BG, fg=TEXT,
-                activebackground=BG, selectcolor=BG, cursor="hand2",
-            ).pack(side=tk.LEFT, padx=(0, 4))
-
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
-            fill=tk.X, pady=(8, 0), **pad)
-
-        # ── Interval ──────────────────────────────────────────────────────
-        tk.Label(dlg, text="Repeat interval", font=(FONT, 9, "bold"), fg=SUBTEXT, bg=BG).pack(
-            anchor="w", pady=(8, 4), **pad)
-
-        interval_frame = tk.Frame(dlg, bg=BG)
-        interval_frame.pack(anchor="w", **pad)
-        tk.Label(interval_frame, text="Every", font=(
-            FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
-        self._interval_var = tk.StringVar(
-            value=str(config.get("interval_weeks", 1)))
-        tk.Spinbox(
-            interval_frame, textvariable=self._interval_var,
-            from_=1, to=52, width=4,
-            font=(FONT, 10), relief=tk.FLAT,
-            highlightbackground=SEP_COLOR, highlightthickness=1,
-        ).pack(side=tk.LEFT, padx=6)
-        tk.Label(interval_frame, text="week(s)", font=(
-            FONT, 10), fg=TEXT, bg=BG).pack(side=tk.LEFT)
-
-        tk.Frame(dlg, bg=SEP_COLOR, height=1).pack(
-            fill=tk.X, pady=(8, 0), **pad)
-
-        # ── Time ──────────────────────────────────────────────────────────
-        tk.Label(dlg, text="Time  (24 h, Europe/Zurich)", font=(FONT, 9, "bold"), fg=SUBTEXT, bg=BG).pack(
-            anchor="w", pady=(8, 4), **pad)
-
-        time_frame = tk.Frame(dlg, bg=BG)
-        time_frame.pack(anchor="w", **pad)
-        self._hour_var = tk.StringVar(value=f"{config.get('hour',   13):02d}")
-        self._minute_var = tk.StringVar(
-            value=f"{config.get('minute',  0):02d}")
-        tk.Spinbox(
-            time_frame, textvariable=self._hour_var,
-            values=[f"{h:02d}" for h in range(24)], width=4,
-            font=(FONT, 11), relief=tk.FLAT,
-            highlightbackground=SEP_COLOR, highlightthickness=1,
-        ).pack(side=tk.LEFT)
-        tk.Label(time_frame, text=" : ", font=(FONT, 11, "bold"),
-                 fg=TEXT, bg=BG).pack(side=tk.LEFT)
-        tk.Spinbox(
-            time_frame, textvariable=self._minute_var,
-            values=[f"{m:02d}" for m in range(0, 60, 5)], width=4,
-            font=(FONT, 11), relief=tk.FLAT,
-            highlightbackground=SEP_COLOR, highlightthickness=1,
-        ).pack(side=tk.LEFT)
-
-        # ── Buttons ───────────────────────────────────────────────────────
-        btn_frame = tk.Frame(dlg, bg=BG)
-        btn_frame.pack(fill=tk.X, padx=20, pady=(14, 14))
-        tk.Button(
-            btn_frame, text="Cancel", command=dlg.destroy,
-            font=(FONT, 10), bg=BG, fg=TEXT,
-            relief=tk.FLAT, bd=1, padx=16, pady=5, cursor="hand2",
-        ).pack(side=tk.RIGHT, padx=(6, 0))
-        tk.Button(
-            btn_frame, text="  Save  ", command=lambda: self._save(dlg),
-            font=(FONT, 10, "bold"), bg=DARK_BLUE, fg="white",
-            activebackground=MID_BLUE, relief=tk.FLAT, padx=16, pady=5, cursor="hand2",
-        ).pack(side=tk.RIGHT)
-
-        parent.wait_window(dlg)
-
-    def _save(self, dlg: tk.Toplevel) -> None:
-        days = [i for i, v in enumerate(self._day_vars) if v.get()]
-        if not days:
-            messagebox.showwarning(
-                "Scheduler", "Select at least one day.", parent=dlg)
-            return
-        try:
-            interval = max(1, int(self._interval_var.get()))
-            hour = int(self._hour_var.get())
-            minute = int(self._minute_var.get())
-        except ValueError:
-            messagebox.showwarning(
-                "Scheduler", "Invalid time or interval value.", parent=dlg)
-            return
-        from datetime import date
-        self._result = {
-            "enabled":        True,
-            "days":           days,
-            "interval_weeks": interval,
-            "hour":           hour,
-            "minute":         minute,
-            "start_date":     date.today().isoformat(),
-        }
-        dlg.destroy()
-
-    @property
-    def result(self) -> dict | None:
         return self._result
 
 
@@ -836,11 +709,6 @@ class JobHunterApp:
         self._prefilter_excluded: list[str] = list(PREFILTER_EXCLUDED_TITLE)
         self._excluded_locations: list[str] = list(
             PREFILTER_EXCLUDED_LOCATIONS)
-        self._scheduler_config: dict = {
-            "enabled": False, "days": [0, 2, 4],
-            "interval_weeks": 1, "hour": 13, "minute": 0, "start_date": None,
-        }
-        self._bg_scheduler = None
         self.output_path: str | None = None
         self._pdf_path: str | None = None
         self._cancel_event = threading.Event()
@@ -850,12 +718,11 @@ class JobHunterApp:
         self.root.title("Hunty")
         self.root.resizable(False, False)
         self.root.configure(bg=BG)
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
         self._build_ui()
-        self._update_scheduler_badge()
 
         self.root.update_idletasks()
-        w, h = 490, 750
+        w, h = 490, 810
         x = (self.root.winfo_screenwidth() - w) // 2
         y = (self.root.winfo_screenheight() - h) // 2
         self.root.geometry(f"{w}x{h}+{x}+{y}")
@@ -996,6 +863,21 @@ class JobHunterApp:
             font=(FONT, 8), fg=SUBTEXT, bg=BG,
         ).pack(anchor="w", padx=22)
 
+        self.postdoc_var = tk.BooleanVar(value=False)
+        postdoc_frame = tk.Frame(body, bg=BG)
+        postdoc_frame.pack(anchor="w", pady=(0, 6))
+        tk.Checkbutton(
+            postdoc_frame, text="Include PostDoc positions",
+            variable=self.postdoc_var,
+            font=(FONT, 11), bg=BG, fg=TEXT,
+            activebackground=BG, selectcolor=BG, cursor="hand2",
+        ).pack(anchor="w")
+        tk.Label(
+            postdoc_frame,
+            text="(Adds PostDoc keywords and allows postdoc results through the title filter)",
+            font=(FONT, 8), fg=SUBTEXT, bg=BG,
+        ).pack(anchor="w", padx=22)
+
         # ── Run ───────────────────────────────────────────────────────────
         self._section_label(body, "Run")
 
@@ -1122,25 +1004,16 @@ class JobHunterApp:
             font=(FONT, 8), fg=SUBTEXT, bg=BG,
         ).grid(row=1, column=1, sticky="w", pady=(0, 6), padx=(_C1, 0))
 
-        self._settings_btn(sg, "🕐  Scheduler…", self._open_scheduler_dialog).grid(
-            row=2, column=0, sticky="ew")
-        _sched_col = tk.Frame(sg, bg=BG)
-        _sched_col.grid(row=2, column=1, sticky="w", padx=(_C1, 0))
-        self._scheduler_status_label = tk.Label(
-            _sched_col, text="",
-            font=(FONT, 8), fg=SUBTEXT, bg=BG,
-        )
-        self._scheduler_status_label.pack(side=tk.LEFT)
-        self._deactivate_btn = tk.Button(
-            _sched_col, text="✕ Deactivate",
-            command=self._deactivate_scheduler,
-            font=(FONT, 8), bg=BG, fg="#C00000",
-            relief=tk.FLAT, bd=1,
+        tk.Label(
+            sg, text="🕐  Schedule",
+            font=(FONT, 9), fg=DARK_BLUE, bg=BG,
+            padx=10, pady=3, anchor="w",
             highlightbackground=SEP_COLOR, highlightthickness=1,
-            padx=6, pady=2, cursor="hand2",
-            state=tk.DISABLED,
-        )
-        self._deactivate_btn.pack(side=tk.LEFT, padx=(8, 0))
+        ).grid(row=2, column=0, sticky="ew")
+        tk.Label(
+            sg, text="GitHub Actions: Mon–Fri, 07:00 UTC (08:00 CET / 09:00 CEST)",
+            font=(FONT, 8), fg=SUBTEXT, bg=BG,
+        ).grid(row=2, column=1, sticky="w", padx=(_C1, 0))
 
     # ------------------------------------------------------------------
     # Summary helpers
@@ -1170,19 +1043,6 @@ class JobHunterApp:
             return "None"
         sample = ", ".join(self._excluded_locations[:3])
         return sample if n <= 3 else f"{sample} +{n - 3} more"
-
-    def _scheduler_summary(self) -> str:
-        cfg = self._scheduler_config
-        if not cfg.get("enabled"):
-            return "—"
-        day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        days = cfg.get("days", [])
-        days_str = "/".join(day_names[d]
-                            for d in sorted(days)) if days else "—"
-        h, m = cfg.get("hour", 13), cfg.get("minute", 0)
-        n = cfg.get("interval_weeks", 1)
-        freq = f" · ×{n}wk" if n > 1 else ""
-        return f"{days_str} · {h:02d}:{m:02d}{freq}"
 
     # ------------------------------------------------------------------
     # CV upload
@@ -1256,104 +1116,6 @@ class JobHunterApp:
             self._excl_loc_label.config(text=self._location_excl_summary())
 
     # ------------------------------------------------------------------
-    # Scheduler dialog + background scheduler
-    # ------------------------------------------------------------------
-
-    def _open_scheduler_dialog(self) -> None:
-        dlg = _SchedulerDialog(self.root, self._scheduler_config)
-        if dlg.result is not None:
-            self._scheduler_config = dlg.result
-            self._apply_scheduler()
-            self._update_scheduler_badge()
-            active = self._scheduler_config.get("enabled", False)
-            self._deactivate_btn.config(
-                state=tk.NORMAL if active else tk.DISABLED)
-
-    def _deactivate_scheduler(self) -> None:
-        self._scheduler_config["enabled"] = False
-        self._apply_scheduler()
-        self._update_scheduler_badge()
-        self._deactivate_btn.config(state=tk.DISABLED)
-
-    def _update_scheduler_badge(self) -> None:
-        active = self._scheduler_config.get("enabled", False)
-        text = self._scheduler_summary()
-        if active:
-            self._scheduler_status_label.config(
-                text=f"  {text}  ",
-                font=(FONT, 8, "bold"), fg="white", bg=DARK_BLUE,
-                relief=tk.FLAT, padx=2, pady=2,
-            )
-        else:
-            self._scheduler_status_label.config(
-                text=text,
-                font=(FONT, 8), fg=SUBTEXT, bg=BG,
-                relief=tk.FLAT, padx=0, pady=0,
-            )
-
-    def _apply_scheduler(self) -> None:
-        """Stop any running scheduler and start a new one from current config."""
-        if self._bg_scheduler is not None:
-            try:
-                self._bg_scheduler.shutdown(wait=False)
-            except Exception:
-                pass
-            self._bg_scheduler = None
-
-        cfg = self._scheduler_config
-        if not cfg.get("enabled"):
-            return
-
-        days = cfg.get("days", [])
-        if not days:
-            return
-
-        from apscheduler.schedulers.background import BackgroundScheduler
-        from apscheduler.triggers.cron import CronTrigger
-        from config import SCHEDULE_TIMEZONE
-
-        day_abbrs = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-        days_str = ",".join(day_abbrs[d] for d in sorted(days))
-        interval = cfg.get("interval_weeks", 1)
-        start_iso = cfg.get("start_date")
-
-        def _scheduled_job() -> None:
-            if interval > 1 and start_iso:
-                from datetime import date, timedelta
-                today = date.today()
-                start = date.fromisoformat(start_iso)
-                start_monday = start - timedelta(days=start.weekday())
-                current_monday = today - timedelta(days=today.weekday())
-                weeks_elapsed = (current_monday - start_monday).days // 7
-                if weeks_elapsed % interval != 0:
-                    return
-            # Don't start a new run while one is already in progress
-            if self._running:
-                return
-            self.root.after(0, self._start_run)
-
-        self._bg_scheduler = BackgroundScheduler(timezone=SCHEDULE_TIMEZONE)
-        self._bg_scheduler.add_job(
-            _scheduled_job,
-            trigger=CronTrigger(
-                day_of_week=days_str,
-                hour=cfg.get("hour", 13),
-                minute=cfg.get("minute", 0),
-                timezone=SCHEDULE_TIMEZONE,
-            ),
-            misfire_grace_time=3600,
-        )
-        self._bg_scheduler.start()
-
-    def _on_close(self) -> None:
-        if self._bg_scheduler is not None:
-            try:
-                self._bg_scheduler.shutdown(wait=False)
-            except Exception:
-                pass
-        self.root.destroy()
-
-    # ------------------------------------------------------------------
     # Countries dialog
     # ------------------------------------------------------------------
 
@@ -1408,17 +1170,29 @@ class JobHunterApp:
         self._step_label.config(text="")
         self.status_label.config(text="Starting…", fg=SUBTEXT)
 
+        include_postdoc = self.postdoc_var.get()
+        keywords = list(self._keywords)
+        swiss_keywords = list(self._swiss_keywords)
+        excluded = list(self._prefilter_excluded)
+
+        if include_postdoc:
+            keywords = keywords + _POSTDOC_KEYWORDS
+            swiss_keywords = swiss_keywords + _POSTDOC_SWISS_KEYWORDS
+        else:
+            excluded = excluded + ["postdoc", "postdoctoral", "post-doc", "post doc"]
+
         threading.Thread(
             target=self._run_pipeline,
             args=(
                 self.ai_var.get(),
-                list(self._keywords) or None,
-                list(self._swiss_keywords) or None,
+                keywords or None,
+                swiss_keywords or None,
                 "Switzerland",
                 list(self._countries) or None,
                 list(self._prefilter_required),
-                list(self._prefilter_excluded),
+                excluded,
                 list(self._excluded_locations),
+                include_postdoc,
             ),
             daemon=True,
         ).start()
@@ -1469,10 +1243,10 @@ class JobHunterApp:
             "keywords":            list(self._keywords),
             "swiss_keywords":      list(self._swiss_keywords),
             "enable_ai":           bool(self.ai_var.get()),
+            "include_postdoc":     bool(self.postdoc_var.get()),
             "prefilter_required":  list(self._prefilter_required),
             "prefilter_excluded":  list(self._prefilter_excluded),
             "excluded_locations":  list(self._excluded_locations),
-            "scheduler":           dict(self._scheduler_config),
         }
         try:
             with open(path, "w", encoding="utf-8") as f:
@@ -1510,6 +1284,8 @@ class JobHunterApp:
             self._countries_label.config(text=self._countries_summary())
         if "enable_ai" in data:
             self.ai_var.set(bool(data["enable_ai"]))
+        if "include_postdoc" in data:
+            self.postdoc_var.set(bool(data["include_postdoc"]))
         if isinstance(data.get("prefilter_required"), list):
             self._prefilter_required = data["prefilter_required"]
             self._filter_label.config(text=self._filter_summary())
@@ -1519,13 +1295,6 @@ class JobHunterApp:
         if isinstance(data.get("excluded_locations"), list):
             self._excluded_locations = data["excluded_locations"]
             self._excl_loc_label.config(text=self._location_excl_summary())
-        if isinstance(data.get("scheduler"), dict):
-            self._scheduler_config = data["scheduler"]
-            self._apply_scheduler()
-            self._update_scheduler_badge()
-            active = self._scheduler_config.get("enabled", False)
-            self._deactivate_btn.config(
-                state=tk.NORMAL if active else tk.DISABLED)
 
         name = data.get("name") or os.path.splitext(os.path.basename(path))[0]
         self.status_label.config(text=f"Settings loaded: {name}", fg=SUBTEXT)
@@ -1544,6 +1313,7 @@ class JobHunterApp:
         prefilter_required: list[str] | None = None,
         prefilter_excluded: list[str] | None = None,
         excluded_locations: list[str] | None = None,
+        postdoc_mode: bool = False,
     ) -> None:
         try:
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1560,6 +1330,7 @@ class JobHunterApp:
                 prefilter_excluded_override=prefilter_excluded,
                 prefilter_excluded_locations_override=excluded_locations,
                 cancel_event=self._cancel_event,
+                postdoc_mode=postdoc_mode,
             )
             path, new_count, stats = result if isinstance(
                 result, tuple) and len(result) == 3 else (result, None, None)

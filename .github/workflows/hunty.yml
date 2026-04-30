@@ -2,8 +2,13 @@ name: Hunty Job Scraper
 
 on:
   schedule:
+<<<<<<< HEAD
     # Mon / Wed / Fri at 11:00 UTC = 13:00 CEST (summer) / 12:00 CET (winter)
     - cron: '0 6 * * 1-5'
+=======
+    # Mon–Fri at 07:00 UTC = 08:00 CET (winter) / 09:00 CEST (summer)
+    - cron: '0 7 * * 1-5'
+>>>>>>> b39c067 (fix: upgrade CI to Python 3.12, fix schedule, gate academic scrapers on PostDoc mode)
   workflow_dispatch:   # allows manual trigger from GitHub UI
 
 jobs:
@@ -21,7 +26,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install Python dependencies

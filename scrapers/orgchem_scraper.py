@@ -6,11 +6,52 @@ Each listing links to a PDF, so no description text is available.
 Title + company + location are used for pre-filtering and AI scoring.
 """
 import logging
+import re
+from datetime import date
 
 import requests
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
+
+_MONTH_MAP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def _parse_orgchem_date(text: str) -> date | None:
+    """Parse 'Mar, 24th' → date. No year on the site; infer as most recent past occurrence."""
+    m = re.match(r'\s*([A-Za-z]{3})[^,]*,?\s+(\d+)', text.strip())
+    if not m:
+        return None
+    month = _MONTH_MAP.get(m.group(1).lower())
+    if not month:
+        return None
+    day = int(m.group(2))
+    today = date.today()
+    try:
+        d = date(today.year, month, day)
+    except ValueError:
+        return None
+    if d > today:
+        try:
+            d = date(today.year - 1, month, day)
+        except ValueError:
+            return None
+    return d
+
+
+def _two_months_ago() -> date:
+    import calendar
+    today = date.today()
+    m = today.month - 2
+    y = today.year
+    if m <= 0:
+        m += 12
+        y -= 1
+    day = min(today.day, calendar.monthrange(y, m)[1])
+    return date(y, m, day)
 
 _EUROPE_URL = "https://www.organic-chemistry.org/jobs/europe.htm"
 _BASE_URL   = "https://www.organic-chemistry.org/jobs/"
@@ -90,5 +131,15 @@ def scrape_orgchem() -> list[dict]:
             "source":      "organic-chemistry.org",
         })
 
-    logger.info("organic-chemistry.org: %d jobs scraped from europe.htm", len(jobs))
-    return jobs
+    cutoff = _two_months_ago()
+    fresh: list[dict] = []
+    for job in jobs:
+        posted = _parse_orgchem_date(job.get("date_posted", ""))
+        if posted is None or posted >= cutoff:
+            fresh.append(job)
+
+    logger.info(
+        "organic-chemistry.org: %d jobs (%d older than 2 months dropped)",
+        len(fresh), len(jobs) - len(fresh),
+    )
+    return fresh

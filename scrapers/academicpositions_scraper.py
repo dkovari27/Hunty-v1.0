@@ -127,12 +127,15 @@ def _fetch_deadline(url: str, session: _requests.Session) -> str:
 def scrape_academicpositions(
     keywords: list[str],
     max_results: int = 20,
+    countries: list[str] | None = None,
 ) -> list[dict]:
     """
     Scrape academicpositions.com for each keyword.
     Uses Playwright (headless Chromium) — JS-rendered site.
     After collecting, fetches each detail page to check the application
     deadline and drops any jobs whose deadline has already passed.
+    If `countries` is provided, jobs whose location doesn't contain any
+    of the listed country names are dropped.
     Returns deduplicated job dicts.
     """
     try:
@@ -208,6 +211,20 @@ def scrape_academicpositions(
                 break
 
         logger.debug("  [academicpositions] '%s': %d jobs collected", keyword, kw_count)
+
+    # ── Country filter ────────────────────────────────────────────────────────
+    if countries:
+        _country_lower = {c.lower() for c in countries}
+        before = len(all_jobs)
+        all_jobs = [
+            j for j in all_jobs
+            if not j.get("location")
+            or any(c in j["location"].lower() for c in _country_lower)
+        ]
+        logger.debug(
+            "  [academicpositions] country filter: %d → %d jobs",
+            before, len(all_jobs),
+        )
 
     # ── Deadline filter ───────────────────────────────────────────────────────
     session = _requests.Session()

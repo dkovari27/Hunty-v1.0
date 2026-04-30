@@ -152,12 +152,15 @@ def _fetch_deadline(url: str, session: requests.Session) -> str:
 def scrape_scholarshipdb(
     keywords: list[str],
     max_results: int = 20,
+    countries: list[str] | None = None,
 ) -> list[dict]:
     """
     Scrape scholarshipdb.net for each keyword.
     Uses plain HTTP requests — server-rendered HTML, no JS needed.
     After collecting, fetches each detail page to check the application
     deadline and drops any jobs whose deadline has already passed.
+    If `countries` is provided, jobs whose location doesn't contain any
+    of the listed country names are dropped.
     Returns deduplicated job dicts.
     """
     session = requests.Session()
@@ -205,6 +208,20 @@ def scrape_scholarshipdb(
             time.sleep(0.5)
 
         logger.debug("  [scholarshipdb] '%s': %d jobs collected", keyword, kw_count)
+
+    # ── Country filter ────────────────────────────────────────────────────────
+    if countries:
+        _country_lower = {c.lower() for c in countries}
+        before = len(all_jobs)
+        all_jobs = [
+            j for j in all_jobs
+            if not j.get("location")
+            or any(c in j["location"].lower() for c in _country_lower)
+        ]
+        logger.debug(
+            "  [scholarshipdb] country filter: %d → %d jobs",
+            before, len(all_jobs),
+        )
 
     # ── Deadline filter ───────────────────────────────────────────────────────
     active: list[dict] = []
