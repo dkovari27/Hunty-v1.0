@@ -109,6 +109,13 @@ def scrape_european_sites(
     seen: set = set()
     lock = threading.Lock()          # guards all_jobs / seen across worker threads
 
+    # tls-client-64.dll (bundled with python-jobspy) has a thread-safety bug:
+    # calling scrape_jobs() from multiple threads simultaneously triggers a Go
+    # runtime panic (exception 0x80000003) that kills the process.  LinkedIn
+    # already searches all of Europe, so the Indeed country scrapers add no
+    # unique value and are excluded here to prevent the crash.
+    sites = [s for s in sites if s.scraper != "jobspy_indeed"]
+
     skipped = sum(1 for s in sites if s.scraper == "skip")
     active  = [s for s in sites if s.scraper != "skip"]
     total   = max(len(active), 1)
