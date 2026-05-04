@@ -19,6 +19,26 @@ from config import (
 
 logger = logging.getLogger(__name__)
 
+# tls_client.Session leaks a Go goroutine on every scrape_jobs() call because
+# jobspy never calls session.close().  With 12 keywords each creating a new
+# session the leaked goroutines accumulate and race inside tls-client-64.dll,
+# triggering a Go runtime panic (0x80000003) within ~30 seconds.
+# Patching __del__ forces cleanup as soon as each session's Python ref-count
+# hits zero, which happens immediately after each scrape_jobs() call returns
+# (CPython's reference-counting GC, not the cyclic collector).
+try:
+    import tls_client as _tls_mod
+    if not hasattr(_tls_mod.Session, "__del__"):
+        def _tls_session_del(self):
+            try:
+                self.close()
+            except Exception:
+                pass
+        _tls_mod.Session.__del__ = _tls_session_del
+        logger.debug("tls_client.Session.__del__ patched to call close()")
+except Exception:
+    pass
+
 # jobspy job-type mapping
 _JOB_TYPE_MAP = {
     "fulltime":   "fulltime",
