@@ -50,7 +50,7 @@ RADIUS_MILES = 25
 JOB_TYPE = "fulltime"   # fulltime | parttime | contract | internship | ""
 REMOTE_ONLY = False
 MAX_RESULTS_PER_KEYWORD = 20
-HOURS_OLD = 168          # only jobs posted within this many hours (1 week)
+HOURS_OLD = 72          # only jobs posted within this many hours (3 days)
 
 # ---------------------------------------------------------------------------
 # Pre-filter (applied before AI to save API calls)
