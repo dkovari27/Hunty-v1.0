@@ -37,6 +37,7 @@ class SiteConfig:
     scraper: str = "generic"
     search_url: str = ""
     job_url_substr: list[str] = field(default_factory=list)
+    job_url_substr_exclude: list[str] = field(default_factory=list)
     jobspy_country: str = ""
     keywords_override: list[str] = field(default_factory=list)
 
@@ -298,6 +299,7 @@ _OVERRIDES: dict[str, dict] = {
     "www.reed.co.uk": {
         "search_url": "https://www.reed.co.uk/jobs/{keyword}-jobs?proximity=50&datecreatedoffset=3d",
         "job_url_substr": ["/jobs/"],
+        "job_url_substr_exclude": ["/courses/"],
     },
     "www.totaljobs.com": {
         "search_url": "https://www.totaljobs.com/jobs/{keyword}?postedwithin=3",
@@ -386,6 +388,7 @@ def load_sites(exclude_swiss_companies: bool = False) -> list[SiteConfig]:
             scraper=scraper,
             search_url=search_url,
             job_url_substr=overrides.get("job_url_substr", []),
+            job_url_substr_exclude=overrides.get("job_url_substr_exclude", []),
             jobspy_country=overrides.get("jobspy_country", ""),
             keywords_override=overrides.get("keywords_override", []),
         )

@@ -72,6 +72,7 @@ def _dispatch(site: SiteConfig, keywords: list[str], location: str) -> list[dict
             location=location,
             max_results=MAX_RESULTS_PER_KEYWORD,
             hours_old=HOURS_OLD,
+            job_url_substr_exclude=site.job_url_substr_exclude,
         )
 
     logger.warning(f"Unknown scraper type '{site.scraper}' for {site.name}")

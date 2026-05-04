@@ -253,6 +253,7 @@ def scrape_generic(
     location: str,
     max_results: int = 20,
     hours_old: int = 72,
+    job_url_substr_exclude: list[str] | None = None,
 ) -> list[dict]:
     """
     Scrape a single site using the generic strategy.
@@ -314,6 +315,8 @@ def scrape_generic(
                         site_name, url, job_url_substr, keyword, base_url, max_results
                     )
                     for job in pw_jobs:
+                        if job_url_substr_exclude and any(p in job["url"] for p in job_url_substr_exclude):
+                            continue
                         key = job["url"] or (job["title"].lower(), job["company"].lower())
                         if key and key not in seen_urls:
                             seen_urls.add(key)
@@ -342,6 +345,8 @@ def scrape_generic(
                         if new_on_page >= max_results:
                             break
                         job = _normalise(raw, keyword, site_name, base_url)
+                        if job_url_substr_exclude and any(p in job["url"] for p in job_url_substr_exclude):
+                            continue
                         key = job["url"] or (job["title"].lower(), job["company"].lower())
                         if key and key not in seen_urls:
                             seen_urls.add(key)
@@ -351,22 +356,23 @@ def scrape_generic(
             # --- Strategy 3: vacancy link scan ---
             if new_on_page == 0:
                 link_jobs = _scan_links(html, keyword, site_name, base_url, job_url_substr)
-                # Quality filter: discard shallow nav links (e.g. /jobs/wien).
-                # Real job post paths have ≥ 3 segments or a digit in the last one.
+                # Quality filter: discard nav/category links (e.g. /en/jobs/chemistry/).
+                # Real job pages always have either a digit in the URL path (job ID)
+                # or at least 4 path segments.  The old ≥3-segment bypass was too loose —
+                # it let keyword-search pages like jobscout24.ch/en/jobs/chemistry/ through.
                 def _path_parts(u: str) -> list[str]:
                     return [p for p in urllib.parse.urlparse(u).path.split("/") if p]
 
                 real_link_jobs = [
                     j for j in link_jobs
-                    if len(_path_parts(j["url"])) >= 3
-                    or any(c.isdigit() for c in (_path_parts(j["url"]) or [""])[-1])
-                    # Site-specific patterns always trusted (depth filter targets
-                    # generic nav links like karriere.at /jobs/wien, not company pages)
-                    or (job_url_substr and any(pat in j["url"] for pat in job_url_substr))
+                    if any(c.isdigit() for c in urllib.parse.unquote(urllib.parse.urlparse(j["url"]).path))
+                    or len(_path_parts(j["url"])) >= 4
                 ]
                 for job in real_link_jobs:
                     if new_on_page >= max_results:
                         break
+                    if job_url_substr_exclude and any(p in job["url"] for p in job_url_substr_exclude):
+                        continue
                     key = job["url"] or (job["title"].lower(), job["company"].lower())
                     if key and key not in seen_urls:
                         seen_urls.add(key)
@@ -382,6 +388,8 @@ def scrape_generic(
                     site_name, url, job_url_substr, keyword, base_url, max_results
                 )
                 for job in pw_jobs:
+                    if job_url_substr_exclude and any(p in job["url"] for p in job_url_substr_exclude):
+                        continue
                     key = job["url"] or (job["title"].lower(), job["company"].lower())
                     if key and key not in seen_urls:
                         seen_urls.add(key)
