@@ -16,7 +16,8 @@ CONFIG_PERSONAL before running — see .github/workflows/hunty.yml.
 SEARCH_KEYWORDS = [
     "AI drug discovery chemist",
     "AI machine learning cheminformatics",
-    "Cheminformatician pharmaceutical",
+    "AI retrosynthesis process chemist",
+    "cheminformatician",
     "Cheminformatics scientist KNIME RDKit",
     "Computational medicinal chemist",
     "Discovery informatics cheminformatics",
@@ -26,6 +27,7 @@ SEARCH_KEYWORDS = [
     "Research scientist medicinal chemistry CRO",
     "Small molecule drug discovery scientist",
     "Synthetic medicinal chemist hit-to-lead",
+    "Technical product manager cheminformatics",
 ]
 
 # Used for jobs.ch and Swiss company career pages — short terms work better
