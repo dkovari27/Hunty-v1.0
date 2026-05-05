@@ -50,7 +50,7 @@ RADIUS_MILES = 25
 JOB_TYPE = "fulltime"   # fulltime | parttime | contract | internship | ""
 REMOTE_ONLY = False
 MAX_RESULTS_PER_KEYWORD = 20
-HOURS_OLD = 72          # only jobs posted within this many hours (3 days)
+HOURS_OLD = int(os.getenv("HUNTY_HOURS_OLD", "168"))  # override via env for weekly run
 
 # ---------------------------------------------------------------------------
 # Pre-filter (applied before AI to save API calls)
@@ -61,7 +61,7 @@ PREFILTER_EXCLUDED_LOCATIONS: list[str] = []
 # ---------------------------------------------------------------------------
 # Swiss company career pages
 # ---------------------------------------------------------------------------
-ENABLE_SWISS_COMPANIES = True    # scrape individual Swiss company career pages
+ENABLE_SWISS_COMPANIES = os.getenv("HUNTY_SWISS", "true").lower() != "false"
 
 # ---------------------------------------------------------------------------
 # European multi-country search

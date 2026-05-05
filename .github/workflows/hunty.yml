@@ -2,8 +2,10 @@ name: Hunty Job Scraper
 
 on:
   schedule:
-    # Mon–Fri at 06:00 UTC = 08:00 CEST (summer) / 07:00 CET (winter)
-    - cron: '0 6 * * 1-5'
+    # Daily (Mon, Wed, Thu, Fri) at 06:00 UTC — no Swiss company career pages (fast)
+    - cron: '0 6 * * 1,3,4,5'
+    # Weekly (Tuesday) at 06:00 UTC — includes Swiss company career pages, 1.5-week window
+    - cron: '0 6 * * 2'
   workflow_dispatch:
     inputs:
       mode:
@@ -13,13 +15,14 @@ on:
         type: choice
         options:
           - switzerland
+          - switzerland-weekly
           - eu
 
 jobs:
   scrape-and-email:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # needed to commit history back
+      contents: write
 
     steps:
       - name: Checkout repo
@@ -36,17 +39,35 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+          restore-keys: playwright-chromium-${{ runner.os }}-
+
       - name: Install Playwright browser
         run: playwright install chromium --with-deps
 
+      - name: Resolve run mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "value=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.schedule }}" = "0 6 * * 2" ]; then
+            echo "value=switzerland-weekly" >> $GITHUB_OUTPUT
+          else
+            echo "value=switzerland" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run scraper and email report
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          EXA_API_KEY:       ${{ secrets.EXA_API_KEY }}
-          GMAIL_ADDRESS:     ${{ secrets.GMAIL_ADDRESS }}
+          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
+          EXA_API_KEY:        ${{ secrets.EXA_API_KEY }}
+          GMAIL_ADDRESS:      ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          REPORT_EMAIL:      ${{ secrets.REPORT_EMAIL }}
-          HUNTY_MODE:        ${{ github.event.inputs.mode || 'switzerland' }}
+          REPORT_EMAIL:       ${{ secrets.REPORT_EMAIL }}
+          HUNTY_MODE:         ${{ steps.mode.outputs.value }}
         run: python run_ci.py
 
       - name: Persist job history
