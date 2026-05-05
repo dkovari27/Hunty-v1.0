@@ -4,7 +4,16 @@ on:
   schedule:
     # Mon–Fri at 06:00 UTC = 08:00 CEST (summer) / 07:00 CET (winter)
     - cron: '0 6 * * 1-5'
-  workflow_dispatch:   # allows manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Search scope'
+        required: true
+        default: 'switzerland'
+        type: choice
+        options:
+          - switzerland
+          - eu
 
 jobs:
   scrape-and-email:
@@ -37,6 +46,7 @@ jobs:
           GMAIL_ADDRESS:     ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           REPORT_EMAIL:      ${{ secrets.REPORT_EMAIL }}
+          HUNTY_MODE:        ${{ github.event.inputs.mode || 'switzerland' }}
         run: python run_ci.py
 
       - name: Persist job history

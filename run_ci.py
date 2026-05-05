@@ -15,11 +15,21 @@ setup_logging()
 logger = logging.getLogger(__name__)
 
 
+_EU_COUNTRIES = [
+    "Switzerland", "Germany", "United Kingdom", "Netherlands", "France",
+    "Austria", "Belgium", "Denmark", "Sweden", "Norway", "Spain",
+    "Italy", "Ireland", "Finland",
+]
+
+
 def main() -> None:
     """Run the full scrape → PDF → email pipeline for CI/scheduled execution."""
-    logger.info("CI run starting")
+    import os
+    mode = os.getenv("HUNTY_MODE", "switzerland").lower().strip()
+    countries = _EU_COUNTRIES if mode == "eu" else ["Switzerland"]
+    logger.info("CI run starting — mode=%s (%d countries)", mode, len(countries))
 
-    result = run_job_scraper(countries_override=["Switzerland"])
+    result = run_job_scraper(countries_override=countries)
     if result is None:
         logger.info("No jobs scraped — nothing to send.")
         sys.exit(0)
