@@ -190,6 +190,23 @@ _OVERRIDES: dict[str, dict] = {
         "search_url": "https://jobs.ashbyhq.com/noema?search={keyword}",
         "job_url_substr": ["/noema/"],
     },
+    # ─ Syngenta SmartRecruiters ATS ──────────────────────────────────────────
+    "jobs.syngenta.com": {
+        "search_url": "https://jobs.syngenta.com/search?query={keyword}&location=Switzerland",
+        "job_url_substr": ["/job/"],
+    },
+    # ─ Solvias Oracle Cloud HCM ATS ──────────────────────────────────────────
+    "iabxas.fa.ocs.oraclecloud.com": {
+        "search_url": "https://iabxas.fa.ocs.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/jobs",
+        "job_url_substr": ["/CX_1/requisitions/"],
+    },
+    # ─ Virometix on join.com ATS ─────────────────────────────────────────────
+    "join.com/companies/virometix": {
+        "search_url": "https://join.com/companies/virometix",
+        "job_url_substr": ["/virometix/jobs/"],
+    },
+    # ─ BaseLaunch: incubator, check portfolio manually ────────────────────────
+    "baselaunch.ch": {"scraper": "skip"},
     # ─ Simple listing pages (no keyword filter; scrapes all open roles) ───────
     "www.carbogen-amcis.com": {
         "search_url": "https://www.carbogen-amcis.com/careers/open-positions",
