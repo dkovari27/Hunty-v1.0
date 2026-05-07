@@ -1,6 +1,6 @@
 {
   "name": "last_used",
-  "saved_at": "2026-05-05T15:11:15",
+  "saved_at": "2026-05-07T10:38:58",
   "countries": [
     "Switzerland"
   ],
@@ -106,7 +106,10 @@
     "pharmacist",
     "pharmacodynam",
     "pharmacokinet",
-    "protein purification",
+    "purification",
+    "lcms",
+    "lc-ms",
+    "lc/ms",
     "proteomics",
     "single cell",
     "drug delivery",
@@ -141,6 +144,7 @@
     "pathology",
     "staffing"
   ],
+  "prefilter_bypass_keywords": [],
   "excluded_locations": [
     "united states",
     "wales",

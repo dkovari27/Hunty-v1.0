@@ -173,8 +173,9 @@ class _FilterEditorDialog:
         parent: tk.Tk,
         required: list[str],
         excluded: list[str],
+        bypass_keywords: list[str],
     ):
-        self._result: tuple[list[str], list[str]] | None = None
+        self._result: tuple[list[str], list[str], list[str]] | None = None
 
         dlg = tk.Toplevel(parent)
         dlg.title("Edit Filter Words")
@@ -183,7 +184,7 @@ class _FilterEditorDialog:
         dlg.transient(parent)
         dlg.grab_set()
 
-        w, h = 540, 560
+        w, h = 540, 720
         px = parent.winfo_rootx() + (parent.winfo_width() - w) // 2
         py = parent.winfo_rooty() + (parent.winfo_height() - h) // 2
         dlg.geometry(f"{w}x{h}+{px}+{py}")
@@ -236,6 +237,27 @@ class _FilterEditorDialog:
         excl_sb.config(command=self._excl_text.yview)
         self._excl_text.insert("1.0", "\n".join(excluded))
 
+        # ── Bypass-filter keywords ────────────────────────────────────────
+        tk.Label(
+            dlg,
+            text="Bypass-filter search keywords — jobs found by these keywords skip the must-include check:",
+            font=(FONT, 9, "bold"), fg=DARK_BLUE, bg=BG, wraplength=510, justify="left",
+        ).pack(anchor="w", padx=16)
+
+        bypass_frame = tk.Frame(dlg, bg=BG)
+        bypass_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 8))
+        bypass_sb = tk.Scrollbar(bypass_frame)
+        bypass_sb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._bypass_text = tk.Text(
+            bypass_frame, font=(FONT, 10), wrap=tk.WORD,
+            yscrollcommand=bypass_sb.set, height=4,
+            relief=tk.FLAT, bd=0,
+            highlightbackground=SEP_COLOR, highlightthickness=1,
+        )
+        self._bypass_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        bypass_sb.config(command=self._bypass_text.yview)
+        self._bypass_text.insert("1.0", "\n".join(bypass_keywords))
+
         btn_frame = tk.Frame(dlg, bg=BG)
         btn_frame.pack(fill=tk.X, padx=16, pady=(0, 12))
 
@@ -260,11 +282,15 @@ class _FilterEditorDialog:
                 ln.strip() for ln in raw.splitlines()
                 if ln.strip() and not ln.strip().startswith("#")
             ]
-        self._result = (_parse(self._req_text), _parse(self._excl_text))
+        self._result = (
+            _parse(self._req_text),
+            _parse(self._excl_text),
+            _parse(self._bypass_text),
+        )
         dlg.destroy()
 
     @property
-    def result(self) -> tuple[list[str], list[str]] | None:
+    def result(self) -> tuple[list[str], list[str], list[str]] | None:
         return self._result
 
 
@@ -700,15 +726,28 @@ class JobHunterApp:
             SEARCH_KEYWORDS,
             SWISS_SEARCH_KEYWORDS,
         )
-        self._keywords: list[str] = list(SEARCH_KEYWORDS)
-        self._swiss_keywords: list[str] = list(SWISS_SEARCH_KEYWORDS)
+
+        # Try to restore last-used settings; fall back to config_personal defaults
+        _last_used_path = os.path.join(_SETTINGS_DIR, "last_used.json")
+        _last: dict = {}
+        try:
+            with open(_last_used_path, encoding="utf-8") as _f:
+                _last = json.load(_f)
+        except Exception:
+            pass
+        self._last_used: dict = _last  # stored so _build_ui can apply toggle values
+
+        self._keywords: list[str] = _last.get("keywords") or list(SEARCH_KEYWORDS)
+        self._swiss_keywords: list[str] = _last.get("swiss_keywords") or list(SWISS_SEARCH_KEYWORDS)
         self._cv_path: str | None = None
         self._cv_suggestions: list[str] = []
-        self._countries: list[str] = ["Switzerland"]
-        self._prefilter_required: list[str] = list(PREFILTER_REQUIRED)
-        self._prefilter_excluded: list[str] = list(PREFILTER_EXCLUDED_TITLE)
-        self._excluded_locations: list[str] = list(
-            PREFILTER_EXCLUDED_LOCATIONS)
+        self._countries: list[str] = _last.get("countries") or ["Switzerland"]
+        self._prefilter_required: list[str] = _last.get("prefilter_required") or list(PREFILTER_REQUIRED)
+        self._prefilter_excluded: list[str] = _last.get("prefilter_excluded") or list(PREFILTER_EXCLUDED_TITLE)
+        self._bypass_keywords: list[str] = _last.get("prefilter_bypass_keywords") or []
+        self._excluded_locations: list[str] = _last.get("excluded_locations") \
+            if isinstance(_last.get("excluded_locations"), list) \
+            else list(PREFILTER_EXCLUDED_LOCATIONS)
         self.output_path: str | None = None
         self._pdf_path: str | None = None
         self._cancel_event = threading.Event()
@@ -721,8 +760,14 @@ class JobHunterApp:
         self.root.protocol("WM_DELETE_WINDOW", self.root.destroy)
         self._build_ui()
 
+        # Restore toggle states from last-used (ai_var/postdoc_var exist after _build_ui)
+        if "enable_ai" in self._last_used:
+            self.ai_var.set(bool(self._last_used["enable_ai"]))
+        if "include_postdoc" in self._last_used:
+            self.postdoc_var.set(bool(self._last_used["include_postdoc"]))
+
         self.root.update_idletasks()
-        w, h = 490, 810
+        w, h = 490, 850
         x = (self.root.winfo_screenwidth() - w) // 2
         y = (self.root.winfo_screenheight() - h) // 2
         self.root.geometry(f"{w}x{h}+{x}+{y}")
@@ -849,6 +894,7 @@ class JobHunterApp:
         self._section_label(body, "Options")
 
         self.ai_var = tk.BooleanVar(value=False)
+        self.ai_var.trace_add("write", lambda *_: self._autosave_state())
         toggle_frame = tk.Frame(body, bg=BG)
         toggle_frame.pack(anchor="w", pady=(0, 6))
         tk.Checkbutton(
@@ -864,6 +910,7 @@ class JobHunterApp:
         ).pack(anchor="w", padx=22)
 
         self.postdoc_var = tk.BooleanVar(value=False)
+        self.postdoc_var.trace_add("write", lambda *_: self._autosave_state())
         postdoc_frame = tk.Frame(body, bg=BG)
         postdoc_frame.pack(anchor="w", pady=(0, 6))
         tk.Checkbutton(
@@ -997,23 +1044,27 @@ class JobHunterApp:
         self._settings_btn(sg, "📂  Load Settings", self._load_settings).grid(
             row=0, column=1, sticky="ew", pady=(0, 6), padx=(_C1, 0))
 
+        self._push_btn = self._settings_btn(
+            sg, "☁  Push Settings & Config to GitHub", self._push_settings_to_github)
+        self._push_btn.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 6))
+
         self._settings_btn(sg, "🗑  Clear History", self._clear_history).grid(
-            row=1, column=0, sticky="ew", pady=(0, 6))
+            row=2, column=0, sticky="ew", pady=(0, 6))
         tk.Label(
             sg, text="All jobs appear as NEW on next run",
             font=(FONT, 8), fg=SUBTEXT, bg=BG,
-        ).grid(row=1, column=1, sticky="w", pady=(0, 6), padx=(_C1, 0))
+        ).grid(row=2, column=1, sticky="w", pady=(0, 6), padx=(_C1, 0))
 
         tk.Label(
             sg, text="🕐  Schedule",
             font=(FONT, 9), fg=DARK_BLUE, bg=BG,
             padx=10, pady=3, anchor="w",
             highlightbackground=SEP_COLOR, highlightthickness=1,
-        ).grid(row=2, column=0, sticky="ew")
+        ).grid(row=3, column=0, sticky="ew")
         tk.Label(
             sg, text="GitHub Actions: Mon–Fri, 07:00 UTC (08:00 CET / 09:00 CEST)",
             font=(FONT, 8), fg=SUBTEXT, bg=BG,
-        ).grid(row=2, column=1, sticky="w", padx=(_C1, 0))
+        ).grid(row=3, column=1, sticky="w", padx=(_C1, 0))
 
     # ------------------------------------------------------------------
     # Summary helpers
@@ -1032,10 +1083,13 @@ class JobHunterApp:
         return ", ".join(self._countries[:3]) + f" +{len(self._countries) - 3} more"
 
     def _filter_summary(self) -> str:
-        return (
+        s = (
             f"{len(self._prefilter_required)} must-include, "
             f"{len(self._prefilter_excluded)} excluded title terms"
         )
+        if self._bypass_keywords:
+            s += f", {len(self._bypass_keywords)} bypass"
+        return s
 
     def _location_excl_summary(self) -> str:
         n = len(self._excluded_locations)
@@ -1092,6 +1146,7 @@ class JobHunterApp:
         if dlg.result is not None:
             self._swiss_keywords, self._keywords = dlg.result
             self._kw_label.config(text=self._kw_summary())
+            self._autosave_state()
 
     # ------------------------------------------------------------------
     # Filter words editor
@@ -1099,11 +1154,13 @@ class JobHunterApp:
 
     def _open_filter_editor(self) -> None:
         dlg = _FilterEditorDialog(
-            self.root, self._prefilter_required, self._prefilter_excluded
+            self.root, self._prefilter_required, self._prefilter_excluded,
+            self._bypass_keywords,
         )
         if dlg.result is not None:
-            self._prefilter_required, self._prefilter_excluded = dlg.result
+            self._prefilter_required, self._prefilter_excluded, self._bypass_keywords = dlg.result
             self._filter_label.config(text=self._filter_summary())
+            self._autosave_state()
 
     # ------------------------------------------------------------------
     # Location exclusion editor
@@ -1114,6 +1171,7 @@ class JobHunterApp:
         if dlg.result is not None:
             self._excluded_locations = dlg.result
             self._excl_loc_label.config(text=self._location_excl_summary())
+            self._autosave_state()
 
     # ------------------------------------------------------------------
     # Countries dialog
@@ -1124,6 +1182,7 @@ class JobHunterApp:
         if dlg.result is not None:
             self._countries = dlg.result or ["Switzerland"]
             self._countries_label.config(text=self._countries_summary())
+            self._autosave_state()
 
     # ------------------------------------------------------------------
     # Clear seen-job history
@@ -1191,6 +1250,7 @@ class JobHunterApp:
                 excluded,
                 list(self._excluded_locations),
                 include_postdoc,
+                list(self._bypass_keywords),
             ),
             daemon=True,
         ).start()
@@ -1224,6 +1284,87 @@ class JobHunterApp:
     # Settings save / load
     # ------------------------------------------------------------------
 
+    def _autosave_state(self) -> None:
+        """Silently persist current settings to settings/last_used.json."""
+        os.makedirs(_SETTINGS_DIR, exist_ok=True)
+        path = os.path.join(_SETTINGS_DIR, "last_used.json")
+        data = {
+            "name":                       "last_used",
+            "saved_at":                   datetime.now().isoformat(timespec="seconds"),
+            "countries":                  list(self._countries),
+            "keywords":                   list(self._keywords),
+            "swiss_keywords":             list(self._swiss_keywords),
+            "enable_ai":                  bool(self.ai_var.get()),
+            "include_postdoc":            bool(self.postdoc_var.get()),
+            "prefilter_required":         list(self._prefilter_required),
+            "prefilter_excluded":         list(self._prefilter_excluded),
+            "prefilter_bypass_keywords":  list(self._bypass_keywords),
+            "excluded_locations":         list(self._excluded_locations),
+        }
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def _push_settings_to_github(self) -> None:
+        """Commit last_used.json + European_Job_Search_Websites.xlsx and push to GitHub."""
+        self._autosave_state()  # ensure file is up to date before pushing
+        self._push_btn.config(text="☁  Pushing…", fg=SUBTEXT, cursor="arrow")
+        self._push_btn.unbind("<Button-1>")
+
+        def _worker():
+            repo_root = os.path.dirname(os.path.abspath(__file__))
+            try:
+                import subprocess
+
+                def _git(*args):
+                    return subprocess.run(
+                        ["git", *args],
+                        cwd=repo_root,
+                        capture_output=True,
+                        text=True,
+                        timeout=60,
+                    )
+
+                # -f bypasses gitignore rules so the exception in .gitignore is honoured
+                _git("add", "-f", os.path.join("settings", "last_used.json"))
+                _git("add", "European_Job_Search_Websites.xlsx")
+                diff = _git("diff", "--staged", "--quiet")
+                if diff.returncode == 0:
+                    msg = "GitHub already up to date — no changes to push."
+                    self.root.after(0, lambda: self._push_done(msg, success=True))
+                    return
+
+                commit = _git("commit", "-m", "update settings and config [skip ci]")
+                if commit.returncode != 0:
+                    raise RuntimeError(commit.stderr.strip() or commit.stdout.strip())
+
+                pull = _git("pull", "--rebase", "--autostash", "origin", "main")
+                if pull.returncode != 0:
+                    raise RuntimeError(pull.stderr.strip() or pull.stdout.strip())
+
+                push = _git("push")
+                if push.returncode != 0:
+                    raise RuntimeError(push.stderr.strip() or push.stdout.strip())
+
+                msg = "Settings and config pushed to GitHub successfully."
+                self.root.after(0, lambda: self._push_done(msg, success=True))
+            except Exception as exc:
+                err = str(exc)
+                self.root.after(0, lambda: self._push_done(f"Push failed: {err}", success=False))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _push_done(self, message: str, success: bool) -> None:
+        self._push_btn.config(
+            text="☁  Push Settings & Config to GitHub", fg=DARK_BLUE, cursor="hand2")
+        self._push_btn.bind("<Button-1>", lambda _e: self._push_settings_to_github())
+        if success:
+            messagebox.showinfo("GitHub Push", message)
+        else:
+            messagebox.showerror("GitHub Push Failed", message)
+
     def _save_settings(self) -> None:
         os.makedirs(_SETTINGS_DIR, exist_ok=True)
         path = filedialog.asksaveasfilename(
@@ -1235,16 +1376,17 @@ class JobHunterApp:
         if not path:
             return
         data = {
-            "name":                os.path.splitext(os.path.basename(path))[0],
-            "saved_at":            datetime.now().isoformat(timespec="seconds"),
-            "countries":           list(self._countries),
-            "keywords":            list(self._keywords),
-            "swiss_keywords":      list(self._swiss_keywords),
-            "enable_ai":           bool(self.ai_var.get()),
-            "include_postdoc":     bool(self.postdoc_var.get()),
-            "prefilter_required":  list(self._prefilter_required),
-            "prefilter_excluded":  list(self._prefilter_excluded),
-            "excluded_locations":  list(self._excluded_locations),
+            "name":                       os.path.splitext(os.path.basename(path))[0],
+            "saved_at":                   datetime.now().isoformat(timespec="seconds"),
+            "countries":                  list(self._countries),
+            "keywords":                   list(self._keywords),
+            "swiss_keywords":             list(self._swiss_keywords),
+            "enable_ai":                  bool(self.ai_var.get()),
+            "include_postdoc":            bool(self.postdoc_var.get()),
+            "prefilter_required":         list(self._prefilter_required),
+            "prefilter_excluded":         list(self._prefilter_excluded),
+            "prefilter_bypass_keywords":  list(self._bypass_keywords),
+            "excluded_locations":         list(self._excluded_locations),
         }
         try:
             with open(path, "w", encoding="utf-8") as f:
@@ -1290,6 +1432,9 @@ class JobHunterApp:
         if isinstance(data.get("prefilter_excluded"), list):
             self._prefilter_excluded = data["prefilter_excluded"]
             self._filter_label.config(text=self._filter_summary())
+        if isinstance(data.get("prefilter_bypass_keywords"), list):
+            self._bypass_keywords = data["prefilter_bypass_keywords"]
+            self._filter_label.config(text=self._filter_summary())
         if isinstance(data.get("excluded_locations"), list):
             self._excluded_locations = data["excluded_locations"]
             self._excl_loc_label.config(text=self._location_excl_summary())
@@ -1312,6 +1457,7 @@ class JobHunterApp:
         prefilter_excluded: list[str] | None = None,
         excluded_locations: list[str] | None = None,
         postdoc_mode: bool = False,
+        bypass_keywords: list[str] | None = None,
     ) -> None:
         try:
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1327,6 +1473,7 @@ class JobHunterApp:
                 prefilter_required_override=prefilter_required,
                 prefilter_excluded_override=prefilter_excluded,
                 prefilter_excluded_locations_override=excluded_locations,
+                prefilter_bypass_keywords_override=bypass_keywords,
                 cancel_event=self._cancel_event,
                 postdoc_mode=postdoc_mode,
             )

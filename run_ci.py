@@ -7,15 +7,33 @@ Modes (set via HUNTY_MODE env var):
   switzerland-weekly Tuesday — same sources PLUS Swiss company career pages,
                      1.5-week lookback window.  Slow (~1.5 h).
   eu                 Manual trigger — full 14-country EU search.  Very slow (~4 h).
+
+Keywords and filters are read from settings/last_used.json when present,
+falling back to config_personal.py defaults.
 """
+import json
 import logging
 import os
+import pathlib
 import sys
 
 # ---------------------------------------------------------------------------
 # Resolve mode and set config env vars BEFORE any config-dependent import
 # ---------------------------------------------------------------------------
 _mode = os.getenv("HUNTY_MODE", "switzerland").lower().strip()
+
+# ---------------------------------------------------------------------------
+# Load settings override from settings/last_used.json (committed to git)
+# Provides keywords, filters, and excluded_locations set via the desktop GUI.
+# Falls back to config_personal.py defaults if the file is absent.
+# ---------------------------------------------------------------------------
+_settings: dict = {}
+try:
+    _settings_path = pathlib.Path(__file__).parent / "settings" / "last_used.json"
+    with open(_settings_path, encoding="utf-8") as _f:
+        _settings = json.load(_f)
+except Exception:
+    pass
 
 _EU_COUNTRIES = [
     "Switzerland", "Germany", "United Kingdom", "Netherlands", "France",
@@ -55,7 +73,15 @@ def main() -> None:
         os.environ["HUNTY_SWISS"], os.environ["HUNTY_HOURS_OLD"],
     )
 
-    result = run_job_scraper(countries_override=_countries)
+    result = run_job_scraper(
+        countries_override=_countries,
+        keywords_override=_settings.get("keywords") or None,
+        swiss_keywords_override=_settings.get("swiss_keywords") or None,
+        prefilter_required_override=_settings.get("prefilter_required") or None,
+        prefilter_excluded_override=_settings.get("prefilter_excluded") or None,
+        prefilter_excluded_locations_override=_settings.get("excluded_locations") or None,
+        prefilter_bypass_keywords_override=_settings.get("prefilter_bypass_keywords") or None,
+    )
     if result is None:
         logger.info("No jobs scraped — nothing to send.")
         sys.exit(0)

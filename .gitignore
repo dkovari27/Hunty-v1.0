@@ -26,6 +26,7 @@ outputs/*.json
 
 # Personal / local-only
 settings/
+!settings/last_used.json
 CV/
 *.lnk
 *.code-workspace

@@ -63,6 +63,7 @@ def _prefilter(
     excluded: list[str] | None = None,
     excluded_locations: list[str] | None = None,
     postdoc_mode: bool = False,
+    bypass_keywords: list[str] | None = None,
 ) -> list[dict]:
     """
     Fast keyword pre-filter — runs before the AI to cut API costs.
@@ -74,6 +75,8 @@ def _prefilter(
 
     When postdoc_mode=True, jobs whose title contains a postdoc term bypass
     the required-keyword check (exclusion and location filters still apply).
+    When bypass_keywords is set, jobs found via one of those search keywords
+    also skip the required-keyword check (exclusion and location filters still apply).
     Falls back to config values when override lists are None.
     """
     if required is None:
@@ -82,6 +85,8 @@ def _prefilter(
         excluded = PREFILTER_EXCLUDED_TITLE
     if excluded_locations is None:
         excluded_locations = PREFILTER_EXCLUDED_LOCATIONS
+
+    bypass_lower = [k.lower() for k in bypass_keywords] if bypass_keywords else []
 
     # When PostDoc mode is off, automatically exclude postdoc-titled jobs.
     if not postdoc_mode:
@@ -104,6 +109,13 @@ def _prefilter(
             kept.append(job)
             continue
 
+        # Bypass-filter keywords: jobs found via these skip the required-keyword check.
+        if bypass_lower:
+            job_kw = job.get("keyword", "").lower()
+            if any(bk in job_kw or job_kw in bk for bk in bypass_lower):
+                kept.append(job)
+                continue
+
         if required and not any(req.lower() in body for req in required):
             continue
 
@@ -121,6 +133,7 @@ def run_job_scraper(
     prefilter_required_override: list[str] | None = None,
     prefilter_excluded_override: list[str] | None = None,
     prefilter_excluded_locations_override: list[str] | None = None,
+    prefilter_bypass_keywords_override: list[str] | None = None,
     cancel_event=None,
     postdoc_mode: bool = False,
 ) -> tuple[str, int] | None:
@@ -436,6 +449,7 @@ def run_job_scraper(
         excluded=prefilter_excluded_override,
         excluded_locations=prefilter_excluded_locations_override,
         postdoc_mode=postdoc_mode,
+        bypass_keywords=prefilter_bypass_keywords_override,
     )
     logger.info(
         "Pre-filter: %d kept, %d dropped",

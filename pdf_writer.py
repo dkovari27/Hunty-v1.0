@@ -1,13 +1,14 @@
 """
 pdf_writer.py — Generates a clean PDF job report from Excel output or job list.
 
-Portrait A4, three columns: Job Title · Location · Link (clickable).
+Portrait A4, four columns: Job Title · Location · Source · Link (clickable).
 Only NEW jobs are included by default (new_only=True).
 """
 from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime
 
 import openpyxl
@@ -33,8 +34,9 @@ _MARGIN          = 18 * mm   # left/right/top/bottom
 _CONTENT_W = _PAGE_W - 2 * _MARGIN   # ~559 pt
 
 # Column widths (must sum to _CONTENT_W)
-_W_TITLE    = _CONTENT_W * 0.52   # Job Title  — widest, wraps freely
-_W_LOCATION = _CONTENT_W * 0.26   # Location
+_W_TITLE    = _CONTENT_W * 0.455  # Job Title
+_W_LOCATION = _CONTENT_W * 0.195  # Location  — 25% narrower
+_W_SOURCE   = _CONTENT_W * 0.13   # Source scraper
 _W_LINK     = _CONTENT_W * 0.22   # Clickable link
 
 # ── Colours ────────────────────────────────────────────────────────────────────
@@ -224,6 +226,7 @@ def load_jobs_from_excel(
             "title":    str(row[col["Job Title"]] or "").strip(),
             "location": str(row[col["Location"]]  or "").strip(),
             "url":      str(row[col["URL"]]        or "").strip(),
+            "source":   str(row[col.get("Source", col.get("source", 0))] or "").strip() if "Source" in col or "source" in col else "",
             "_status":  status,
         })
         if max_jobs and len(jobs) >= max_jobs:
@@ -256,6 +259,7 @@ def generate_pdf(
     header_row = [
         Paragraph("Job Title",  header_style),
         Paragraph("Location",   header_style),
+        Paragraph("Source",     header_style),
         Paragraph("Link",       header_style),
     ]
 
@@ -264,8 +268,8 @@ def generate_pdf(
     for job in jobs:
         url = job.get("url", "") or ""
         if url:
-            # Show as much of the URL as fits in the column (~30 chars), full URL as target
-            display = url if len(url) <= 20 else url[:18] + "…"
+            display = re.sub(r'^https?://(www\.)?', '', url)
+            display = display if len(display) <= 22 else display[:20] + "…"
             link_cell = Paragraph(
                 f'<a href="{url}"><font color="#0563C1"><u>{display}</u></font></a>',
                 link_style,
@@ -276,6 +280,7 @@ def generate_pdf(
         rows.append([
             Paragraph(job.get("title", "") or "—", cell_style),
             Paragraph(job.get("location", "") or "—", cell_style),
+            Paragraph(job.get("source", "") or "—", cell_style),
             link_cell,
         ])
 
@@ -294,13 +299,13 @@ def generate_pdf(
         ("BOTTOMPADDING",(0, 0), (-1, -1), 5),
         ("LEFTPADDING",  (0, 0), (-1, -1), 6),
         ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        # Link column: centre vertically
-        ("VALIGN",       (2, 1), (2, -1), "MIDDLE"),
+        # Link column (col 3): centre vertically
+        ("VALIGN",       (3, 1), (3, -1), "MIDDLE"),
     ]
 
     table = Table(
         rows,
-        colWidths=[_W_TITLE, _W_LOCATION, _W_LINK],
+        colWidths=[_W_TITLE, _W_LOCATION, _W_SOURCE, _W_LINK],
         repeatRows=1,
         hAlign="LEFT",
     )
