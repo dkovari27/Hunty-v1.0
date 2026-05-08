@@ -1,8 +1,21 @@
 {
   "name": "last_used",
-  "saved_at": "2026-05-07T10:38:58",
+  "saved_at": "2026-05-08T09:55:01",
   "countries": [
-    "Switzerland"
+    "Switzerland",
+    "Germany",
+    "United Kingdom",
+    "Netherlands",
+    "France",
+    "Austria",
+    "Belgium",
+    "Denmark",
+    "Sweden",
+    "Norway",
+    "Spain",
+    "Italy",
+    "Ireland",
+    "Finland"
   ],
   "keywords": [
     "AI machine learning drug discovery",
@@ -29,7 +42,7 @@
     "cheminformatics"
   ],
   "enable_ai": false,
-  "include_postdoc": false,
+  "include_postdoc": true,
   "prefilter_required": [
     "chem",
     "pharma",

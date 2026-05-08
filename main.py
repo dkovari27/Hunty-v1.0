@@ -135,6 +135,7 @@ def run_job_scraper(
     prefilter_excluded_locations_override: list[str] | None = None,
     prefilter_bypass_keywords_override: list[str] | None = None,
     cancel_event=None,
+    pause_event=None,
     postdoc_mode: bool = False,
 ) -> tuple[str, int] | None:
     """
@@ -232,6 +233,13 @@ def run_job_scraper(
     def _is_cancelled() -> bool:
         return cancel_event is not None and cancel_event.is_set()
 
+    def _check_pause() -> None:
+        """Block here while paused; returns immediately when resumed or cancelled."""
+        if pause_event is None:
+            return
+        while pause_event.is_set() and not _is_cancelled():
+            time.sleep(0.3)
+
     # ------------------------------------------------------------------ #
     # Source 1 — Indeed
     # ------------------------------------------------------------------ #
@@ -249,6 +257,7 @@ def run_job_scraper(
         _source_counts["Indeed"] = len(indeed_jobs)
         _source_times["Indeed"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 2 — LinkedIn (Europe-wide; distance column shows Basel proximity)
     # ------------------------------------------------------------------ #
@@ -264,6 +273,7 @@ def run_job_scraper(
         _source_counts["LinkedIn"] = len(linkedin_jobs)
         _source_times["LinkedIn"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 3 — jobs.ch (Switzerland-wide, no location filter)
     # ------------------------------------------------------------------ #
@@ -279,6 +289,7 @@ def run_job_scraper(
         _source_counts["jobs.ch"] = len(jobsch_jobs)
         _source_times["jobs.ch"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 4 — Exa semantic search (no domain restriction)
     # ------------------------------------------------------------------ #
@@ -309,6 +320,7 @@ def run_job_scraper(
             _source_counts["Exa"] = len(exa_jobs)
             _source_times["Exa"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 5 — organic-chemistry.org (European chemistry listings)
     # ------------------------------------------------------------------ #
@@ -324,6 +336,7 @@ def run_job_scraper(
         _source_counts["organic-chemistry.org"] = len(orgchem_jobs)
         _source_times["organic-chemistry.org"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 6 — Academic Positions (academicpositions.com)
     # Toggle via Excel status column (set to "Skip" to disable)
@@ -344,6 +357,7 @@ def run_job_scraper(
         _source_counts["academicpositions.com"] = len(ap_jobs)
         _source_times["academicpositions.com"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 7 — ScholarshipDB (scholarshipdb.net)
     # Toggle via Excel status column (set to "Skip" to disable)
@@ -364,6 +378,7 @@ def run_job_scraper(
         _source_counts["scholarshipdb.net"] = len(sdb_jobs)
         _source_times["scholarshipdb.net"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 8 — Swiss company career pages
     # ------------------------------------------------------------------ #
@@ -387,6 +402,7 @@ def run_job_scraper(
         _source_counts["Swiss Companies"] = len(swiss_jobs)
         _source_times["Swiss Companies"]  = time.time() - _t0
 
+    _check_pause()
     # ------------------------------------------------------------------ #
     # Source 9 — European multi-country job boards
     # ------------------------------------------------------------------ #

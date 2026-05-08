@@ -751,6 +751,7 @@ class JobHunterApp:
         self.output_path: str | None = None
         self._pdf_path: str | None = None
         self._cancel_event = threading.Event()
+        self._pause_event  = threading.Event()
         self._running = False
 
         self.root = tk.Tk()
@@ -928,15 +929,30 @@ class JobHunterApp:
         # ── Run ───────────────────────────────────────────────────────────
         self._section_label(body, "Run")
 
+        _run_btn_row = tk.Frame(body, bg=BG)
+        _run_btn_row.pack(pady=(0, 8))
+
         self.start_btn = tk.Button(
-            body, text="▶  Start Run",
+            _run_btn_row, text="▶  Start Run",
             command=self._start_run,
             font=(FONT, 11, "bold"),
             bg=DARK_BLUE, fg="white",
             activebackground=MID_BLUE, activeforeground="white",
             relief=tk.FLAT, padx=24, pady=7, cursor="hand2", bd=0,
         )
-        self.start_btn.pack(pady=(0, 8))
+        self.start_btn.pack(side=tk.LEFT)
+
+        self.pause_btn = tk.Button(
+            _run_btn_row, text="⏸  Pause",
+            command=self._toggle_pause,
+            font=(FONT, 11, "bold"),
+            bg="#C07800", fg="white",
+            activebackground="#A06000", activeforeground="white",
+            relief=tk.FLAT, padx=24, pady=7, cursor="hand2", bd=0,
+        )
+        # Hidden until a run starts
+        self.pause_btn.pack(side=tk.LEFT, padx=(8, 0))
+        self.pause_btn.pack_forget()
 
         bar_row = tk.Frame(body, bg=BG)
         bar_row.pack(fill=tk.X, pady=(0, 3))
@@ -1215,11 +1231,16 @@ class JobHunterApp:
 
     def _start_run(self) -> None:
         self._cancel_event.clear()
+        self._pause_event.clear()
         self._running = True
         self.start_btn.config(
             text="⬛  Stop", command=self._cancel_run,
             bg="#8B0000", activebackground="#6B0000",
         )
+        self.pause_btn.config(
+            text="⏸  Pause", bg="#C07800", activebackground="#A06000",
+        )
+        self.pause_btn.pack(side=tk.LEFT, padx=(8, 0))
         self.open_btn.config(state=tk.DISABLED, cursor="arrow")
         self.pdf_btn.config(state=tk.DISABLED, cursor="arrow")
         self.output_path = None
@@ -1251,15 +1272,32 @@ class JobHunterApp:
                 list(self._excluded_locations),
                 include_postdoc,
                 list(self._bypass_keywords),
+                self._pause_event,
             ),
             daemon=True,
         ).start()
 
     def _cancel_run(self) -> None:
+        self._pause_event.clear()  # wake thread so it can detect cancel
         self._cancel_event.set()
         self.start_btn.config(state=tk.DISABLED, text="  Cancelling…")
+        self.pause_btn.pack_forget()
         self.status_label.config(
             text="Cancelling — finishing current source, then exporting…", fg=SUBTEXT)
+
+    def _toggle_pause(self) -> None:
+        if self._pause_event.is_set():
+            self._pause_event.clear()
+            self.pause_btn.config(
+                text="⏸  Pause", bg="#C07800", activebackground="#A06000",
+            )
+            self.status_label.config(text="Resumed.", fg=SUBTEXT)
+        else:
+            self._pause_event.set()
+            self.pause_btn.config(
+                text="▶  Resume", bg="#217346", activebackground="#1A5C38",
+            )
+            self.status_label.config(text="Paused — press Resume to continue.", fg="#C07800")
 
     def _open_excel(self) -> None:
         if self.output_path and os.path.exists(self.output_path):
@@ -1458,6 +1496,7 @@ class JobHunterApp:
         excluded_locations: list[str] | None = None,
         postdoc_mode: bool = False,
         bypass_keywords: list[str] | None = None,
+        pause_event=None,
     ) -> None:
         try:
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1475,6 +1514,7 @@ class JobHunterApp:
                 prefilter_excluded_locations_override=excluded_locations,
                 prefilter_bypass_keywords_override=bypass_keywords,
                 cancel_event=self._cancel_event,
+                pause_event=pause_event,
                 postdoc_mode=postdoc_mode,
             )
             path, new_count, stats = result if isinstance(
@@ -1517,6 +1557,8 @@ class JobHunterApp:
 
     def _on_complete(self, output_path: str | None, new_count: int | None = None, pdf_path: str | None = None) -> None:
         self._running = False
+        self._pause_event.clear()
+        self.pause_btn.pack_forget()
         self.progress_var.set(100)
         self.pct_label.config(text="100%")
         self._step_label.config(text="")
@@ -1598,6 +1640,8 @@ class JobHunterApp:
 
     def _on_error(self, msg: str) -> None:
         self._running = False
+        self._pause_event.clear()
+        self.pause_btn.pack_forget()
         self._step_label.config(text="")
         self.status_label.config(text=f"Error: {msg}", fg="#C00000")
         self.start_btn.config(
