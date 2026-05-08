@@ -946,7 +946,7 @@ class JobHunterApp:
         self.pause_btn = tk.Button(
             _run_btn_row, text="⏸  Pause",
             command=self._toggle_pause,
-            font=(FONT, 11, "bold"),
+            font=("Segoe UI Symbol", 11, "bold"),
             bg="#C07800", fg="white",
             activebackground="#A06000", activeforeground="white",
             relief=tk.FLAT, padx=24, pady=7, cursor="hand2", bd=0,
