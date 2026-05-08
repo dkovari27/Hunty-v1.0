@@ -136,6 +136,7 @@ def run_job_scraper(
     prefilter_bypass_keywords_override: list[str] | None = None,
     cancel_event=None,
     pause_event=None,
+    skip_event=None,
     postdoc_mode: bool = False,
 ) -> tuple[str, int] | None:
     """
@@ -240,6 +241,30 @@ def run_job_scraper(
         while pause_event.is_set() and not _is_cancelled():
             time.sleep(0.3)
 
+    def _run_source(fn, *args, **kwargs) -> list:
+        """Run a scraper in a sub-thread; return [] immediately if skip fires."""
+        import threading as _threading
+        result: list = []
+
+        def _worker():
+            try:
+                result.extend(fn(*args, **kwargs))
+            except Exception as exc:
+                logger.error("Source error: %s", exc)
+
+        t = _threading.Thread(target=_worker, daemon=True)
+        t.start()
+        while t.is_alive():
+            if skip_event is not None and skip_event.is_set():
+                skip_event.clear()
+                logger.info("Source skipped by user.")
+                return []
+            if _is_cancelled():
+                return result
+            time.sleep(0.3)
+        t.join()
+        return result
+
     # ------------------------------------------------------------------ #
     # Source 1 — Indeed
     # ------------------------------------------------------------------ #
@@ -248,7 +273,7 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(2, f"[{_step}/{_total_sources}] Scraping Indeed…")
         from scrapers.indeed_scraper import scrape_indeed
-        indeed_jobs = scrape_indeed(keywords)
+        indeed_jobs = _run_source(scrape_indeed, keywords)
         for j in indeed_jobs:
             j.setdefault("source", "Indeed")
         raw_jobs.extend(indeed_jobs)
@@ -266,7 +291,7 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(5, f"[{_step}/{_total_sources}] Scraping LinkedIn…")
         from scrapers.linkedin_scraper import scrape_linkedin
-        linkedin_jobs = scrape_linkedin(keywords, location=linkedin_location)
+        linkedin_jobs = _run_source(scrape_linkedin, keywords, location=linkedin_location)
         raw_jobs.extend(linkedin_jobs)
         logger.info("LinkedIn: %d jobs", len(linkedin_jobs))
         _progress(15, f"[{_step}/{_total_sources}] LinkedIn: {len(linkedin_jobs)} jobs found")
@@ -282,7 +307,7 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(16, f"[{_step}/{_total_sources}] Scraping jobs.ch…")
         from scrapers.jobsch_scraper import scrape_jobsch
-        jobsch_jobs = scrape_jobsch(swiss_keywords)
+        jobsch_jobs = _run_source(scrape_jobsch, swiss_keywords)
         raw_jobs.extend(jobsch_jobs)
         logger.info("jobs.ch:  %d jobs", len(jobsch_jobs))
         _progress(27, f"[{_step}/{_total_sources}] jobs.ch: {len(jobsch_jobs)} jobs found")
@@ -303,7 +328,8 @@ def run_job_scraper(
             sys.path.insert(0, str(Path(__file__).parent / "exa_search"))
             from exa_scraper import scrape_exa  # type: ignore
 
-            exa_jobs = scrape_exa(
+            exa_jobs = _run_source(
+                scrape_exa,
                 keywords=keywords,
                 location=exa_location,
                 exa_api_key=EXA_API_KEY,
@@ -329,7 +355,7 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(39, f"[{_step}/{_total_sources}] Scraping organic-chemistry.org…")
         from scrapers.orgchem_scraper import scrape_orgchem
-        orgchem_jobs = scrape_orgchem()
+        orgchem_jobs = _run_source(scrape_orgchem)
         raw_jobs.extend(orgchem_jobs)
         logger.info("organic-chemistry.org: %d jobs", len(orgchem_jobs))
         _progress(42, f"[{_step}/{_total_sources}] organic-chemistry.org: {len(orgchem_jobs)} jobs found")
@@ -346,7 +372,8 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(43, f"[{_step}/{_total_sources}] Scraping academicpositions.com…")
         from scrapers.academicpositions_scraper import scrape_academicpositions
-        ap_jobs = scrape_academicpositions(
+        ap_jobs = _run_source(
+            scrape_academicpositions,
             keywords=keywords,
             max_results=MAX_RESULTS_PER_KEYWORD,
             countries=ACADEMIC_COUNTRIES,
@@ -367,7 +394,8 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(47, f"[{_step}/{_total_sources}] Scraping scholarshipdb.net…")
         from scrapers.scholarshipdb_scraper import scrape_scholarshipdb
-        sdb_jobs = scrape_scholarshipdb(
+        sdb_jobs = _run_source(
+            scrape_scholarshipdb,
             keywords=keywords,
             max_results=MAX_RESULTS_PER_KEYWORD,
             countries=ACADEMIC_COUNTRIES,
@@ -391,7 +419,8 @@ def run_job_scraper(
         def _swiss_progress(frac: float, msg: str) -> None:
             _progress(43 + frac * 14, f"[{_step}/{_total_sources}] {msg}")  # 43 % → 57 %
 
-        swiss_jobs = scrape_swiss_companies(
+        swiss_jobs = _run_source(
+            scrape_swiss_companies,
             keywords=swiss_keywords,
             location=exa_location,
             progress_callback=_swiss_progress,
@@ -415,7 +444,8 @@ def run_job_scraper(
         def _eu_progress(frac: float, msg: str) -> None:
             _progress(57 + frac * 7, f"[{_step}/{_total_sources}] {msg}")  # 57 % → 64 %
 
-        eu_jobs = scrape_european_sites(
+        eu_jobs = _run_source(
+            scrape_european_sites,
             keywords=keywords,
             location=exa_location,
             countries=run_eu_countries or None,

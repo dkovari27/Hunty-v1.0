@@ -752,6 +752,7 @@ class JobHunterApp:
         self._pdf_path: str | None = None
         self._cancel_event = threading.Event()
         self._pause_event  = threading.Event()
+        self._skip_event   = threading.Event()
         self._running = False
 
         self.root = tk.Tk()
@@ -981,12 +982,26 @@ class JobHunterApp:
         )
         self.progressbar.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        _status_row = tk.Frame(body, bg=BG)
+        _status_row.pack(fill=tk.X, pady=(0, 6))
+
         self.status_label = tk.Label(
-            body, text="",
+            _status_row, text="",
             font=(FONT, 9), fg=SUBTEXT, bg=BG,
-            wraplength=440, justify=tk.LEFT,
+            wraplength=380, justify=tk.LEFT, anchor="w",
         )
-        self.status_label.pack(anchor="w", pady=(0, 6))
+        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.skip_btn = tk.Button(
+            _status_row, text="→  Skip",
+            command=self._skip_source,
+            font=(FONT, 9), bg=BG, fg=DARK_BLUE,
+            relief=tk.FLAT, bd=1,
+            highlightbackground=SEP_COLOR, highlightthickness=1,
+            padx=10, pady=3, cursor="hand2",
+        )
+        self.skip_btn.pack(side=tk.RIGHT)
+        self.skip_btn.pack_forget()
 
         excel_row = tk.Frame(body, bg=BG)
         excel_row.pack(fill=tk.X, pady=(0, 0))
@@ -1232,6 +1247,7 @@ class JobHunterApp:
     def _start_run(self) -> None:
         self._cancel_event.clear()
         self._pause_event.clear()
+        self._skip_event.clear()
         self._running = True
         self.start_btn.config(
             text="⬛  Stop", command=self._cancel_run,
@@ -1241,6 +1257,7 @@ class JobHunterApp:
             text="⏸  Pause", bg="#C07800", activebackground="#A06000",
         )
         self.pause_btn.pack(side=tk.LEFT, padx=(8, 0))
+        self.skip_btn.pack(side=tk.RIGHT)
         self.open_btn.config(state=tk.DISABLED, cursor="arrow")
         self.pdf_btn.config(state=tk.DISABLED, cursor="arrow")
         self.output_path = None
@@ -1273,6 +1290,7 @@ class JobHunterApp:
                 include_postdoc,
                 list(self._bypass_keywords),
                 self._pause_event,
+                self._skip_event,
             ),
             daemon=True,
         ).start()
@@ -1282,8 +1300,13 @@ class JobHunterApp:
         self._cancel_event.set()
         self.start_btn.config(state=tk.DISABLED, text="  Cancelling…")
         self.pause_btn.pack_forget()
+        self.skip_btn.pack_forget()
         self.status_label.config(
             text="Cancelling — finishing current source, then exporting…", fg=SUBTEXT)
+
+    def _skip_source(self) -> None:
+        self._skip_event.set()
+        self.status_label.config(text="Skipping current source…", fg=SUBTEXT)
 
     def _toggle_pause(self) -> None:
         if self._pause_event.is_set():
@@ -1497,6 +1520,7 @@ class JobHunterApp:
         postdoc_mode: bool = False,
         bypass_keywords: list[str] | None = None,
         pause_event=None,
+        skip_event=None,
     ) -> None:
         try:
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1515,6 +1539,7 @@ class JobHunterApp:
                 prefilter_bypass_keywords_override=bypass_keywords,
                 cancel_event=self._cancel_event,
                 pause_event=pause_event,
+                skip_event=skip_event,
                 postdoc_mode=postdoc_mode,
             )
             path, new_count, stats = result if isinstance(
@@ -1558,7 +1583,9 @@ class JobHunterApp:
     def _on_complete(self, output_path: str | None, new_count: int | None = None, pdf_path: str | None = None) -> None:
         self._running = False
         self._pause_event.clear()
+        self._skip_event.clear()
         self.pause_btn.pack_forget()
+        self.skip_btn.pack_forget()
         self.progress_var.set(100)
         self.pct_label.config(text="100%")
         self._step_label.config(text="")
@@ -1641,7 +1668,9 @@ class JobHunterApp:
     def _on_error(self, msg: str) -> None:
         self._running = False
         self._pause_event.clear()
+        self._skip_event.clear()
         self.pause_btn.pack_forget()
+        self.skip_btn.pack_forget()
         self._step_label.config(text="")
         self.status_label.config(text=f"Error: {msg}", fg="#C00000")
         self.start_btn.config(
