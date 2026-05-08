@@ -944,7 +944,7 @@ class JobHunterApp:
         self.start_btn.pack(side=tk.LEFT)
 
         self.pause_btn = tk.Button(
-            _run_btn_row, text="⏸  Pause",
+            _run_btn_row, text="▮▮  Pause",
             command=self._toggle_pause,
             font=("Segoe UI Symbol", 11, "bold"),
             bg="#C07800", fg="white",
@@ -1254,7 +1254,7 @@ class JobHunterApp:
             bg="#8B0000", activebackground="#6B0000",
         )
         self.pause_btn.config(
-            text="⏸  Pause", bg="#C07800", activebackground="#A06000",
+            text="▮▮  Pause", bg="#C07800", activebackground="#A06000",
         )
         self.pause_btn.pack(side=tk.LEFT, padx=(8, 0))
         self.skip_btn.pack(side=tk.RIGHT)
@@ -1312,7 +1312,7 @@ class JobHunterApp:
         if self._pause_event.is_set():
             self._pause_event.clear()
             self.pause_btn.config(
-                text="⏸  Pause", bg="#C07800", activebackground="#A06000",
+                text="▮▮  Pause", bg="#C07800", activebackground="#A06000",
             )
             self.status_label.config(text="Resumed.", fg=SUBTEXT)
         else:
