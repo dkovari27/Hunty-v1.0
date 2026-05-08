@@ -83,7 +83,7 @@ def _row_to_dict(row, keyword: str) -> dict:
     }
 
 
-def scrape_linkedin(keywords: list[str]) -> list[dict]:
+def scrape_linkedin(keywords: list[str], location: str = "Europe") -> list[dict]:
     """
     Scrape LinkedIn for job listings matching each keyword.
     Returns a deduplicated list of job dicts.
@@ -103,13 +103,13 @@ def scrape_linkedin(keywords: list[str]) -> list[dict]:
     job_type = _JOB_TYPE_MAP.get(JOB_TYPE, "") if JOB_TYPE else ""
 
     for keyword in keywords:
-        logger.info(f"Scraping LinkedIn for: '{keyword}'")
+        logger.info(f"Scraping LinkedIn for: '{keyword}' in {location}")
 
         try:
             df = scrape_jobs(
                 site_name=["linkedin"],
                 search_term=keyword,
-                location="Europe",         # Europe-wide; distance column in Excel shows proximity to Basel
+                location=location,
                 results_wanted=MAX_RESULTS_PER_KEYWORD,
                 hours_old=HOURS_OLD,
                 job_type=job_type or None,

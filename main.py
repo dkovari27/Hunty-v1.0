@@ -184,6 +184,13 @@ def run_job_scraper(
     else:
         run_european     = ENABLE_EUROPEAN
         run_eu_countries = EUROPEAN_COUNTRIES
+
+    # LinkedIn location: single-country runs search that country directly;
+    # multi-country runs keep the broad "Europe" search.
+    if countries_override and len(countries_override) == 1:
+        linkedin_location = countries_override[0]
+    else:
+        linkedin_location = "Europe"
     # Swiss company scraping is always driven by ENABLE_SWISS_COMPANIES — never
     # implicitly triggered by the countries selector so it doesn't slow down
     # European-wide runs.
@@ -250,7 +257,7 @@ def run_job_scraper(
         _t0 = time.time()
         _progress(5, f"[{_step}/{_total_sources}] Scraping LinkedIn…")
         from scrapers.linkedin_scraper import scrape_linkedin
-        linkedin_jobs = scrape_linkedin(keywords)
+        linkedin_jobs = scrape_linkedin(keywords, location=linkedin_location)
         raw_jobs.extend(linkedin_jobs)
         logger.info("LinkedIn: %d jobs", len(linkedin_jobs))
         _progress(15, f"[{_step}/{_total_sources}] LinkedIn: {len(linkedin_jobs)} jobs found")
