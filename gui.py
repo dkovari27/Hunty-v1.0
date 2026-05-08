@@ -936,7 +936,7 @@ class JobHunterApp:
         self.start_btn = tk.Button(
             _run_btn_row, text="▶  Start Run",
             command=self._start_run,
-            font=(FONT, 11, "bold"),
+            font=("Segoe UI Symbol", 11, "bold"),
             bg=DARK_BLUE, fg="white",
             activebackground=MID_BLUE, activeforeground="white",
             relief=tk.FLAT, padx=24, pady=7, cursor="hand2", bd=0,
@@ -1250,7 +1250,7 @@ class JobHunterApp:
         self._skip_event.clear()
         self._running = True
         self.start_btn.config(
-            text="⬛  Stop", command=self._cancel_run,
+            text="■  Stop", command=self._cancel_run,
             bg="#8B0000", activebackground="#6B0000",
         )
         self.pause_btn.config(
