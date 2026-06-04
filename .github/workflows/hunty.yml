@@ -2,10 +2,8 @@ name: Hunty Job Scraper
 
 on:
   schedule:
-    # Daily (Mon, Wed, Thu, Fri) at 06:00 UTC — no Swiss company career pages (fast)
-    - cron: '0 6 * * 1,3,4,5'
-    # Weekly (Tuesday) at 06:00 UTC — includes Swiss company career pages, 1.5-week window
-    - cron: '0 6 * * 2'
+    # Mon, Wed, Fri at 06:00 UTC — LinkedIn (Europe) + jobs.ch + Exa (Switzerland)
+    - cron: '0 6 * * 1,3,5'
   workflow_dispatch:
     inputs:
       mode:
@@ -54,8 +52,6 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "value=${{ github.event.inputs.mode }}" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event.schedule }}" = "0 6 * * 2" ]; then
-            echo "value=switzerland-weekly" >> $GITHUB_OUTPUT
           else
             echo "value=switzerland" >> $GITHUB_OUTPUT
           fi

@@ -137,6 +137,7 @@ def run_job_scraper(
     cancel_event=None,
     pause_event=None,
     skip_event=None,
+    linkedin_location_override: str | None = None,
     postdoc_mode: bool = False,
 ) -> tuple[str, int] | None:
     """
@@ -144,10 +145,12 @@ def run_job_scraper(
     Returns (output_path, new_job_count), or None if nothing was saved.
 
     progress_callback(pct, message) — optional, called throughout.
-    keywords_override  — replaces config.SEARCH_KEYWORDS when provided.
-    location_override  — overrides the Exa search location.
-    countries_override — list of countries; enables the European scraper
-                         with exactly those countries when provided.
+    keywords_override           — replaces config.SEARCH_KEYWORDS when provided.
+    location_override           — overrides the Exa/jobs.ch search location.
+    countries_override          — list of countries for the European boards scraper.
+    linkedin_location_override  — overrides LinkedIn search location independently
+                                  of countries_override (e.g. "Europe" while other
+                                  sources stay Switzerland-only).
     """
     from ai_filter import filter_jobs
     import application_tracker
@@ -187,9 +190,11 @@ def run_job_scraper(
         run_european     = ENABLE_EUROPEAN
         run_eu_countries = EUROPEAN_COUNTRIES
 
-    # LinkedIn location: single-country runs search that country directly;
-    # multi-country runs keep the broad "Europe" search.
-    if countries_override and len(countries_override) == 1:
+    # LinkedIn location: explicit override wins; otherwise single-country runs
+    # search that country directly and multi-country runs use "Europe".
+    if linkedin_location_override:
+        linkedin_location = linkedin_location_override
+    elif countries_override and len(countries_override) == 1:
         linkedin_location = countries_override[0]
     else:
         linkedin_location = "Europe"

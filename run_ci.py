@@ -2,9 +2,9 @@
 run_ci.py — CI entry point for GitHub Actions.
 
 Modes (set via HUNTY_MODE env var):
-  switzerland        Daily Mon/Wed/Thu/Fri — LinkedIn + jobs.ch + Exa, no Swiss
-                     company career pages.  Fast (~10 min).
-  switzerland-weekly Tuesday — same sources PLUS Swiss company career pages,
+  switzerland        Daily Mon/Wed/Fri — LinkedIn (Europe-wide) + jobs.ch +
+                     Exa (Switzerland).  Fast (~10 min).
+  switzerland-weekly Manual trigger — same PLUS Swiss company career pages,
                      1.5-week lookback window.  Slow (~1.5 h).
   eu                 Manual trigger — full 14-country EU search.  Very slow (~4 h).
 
@@ -43,14 +43,17 @@ _EU_COUNTRIES = [
 
 if _mode == "switzerland-weekly":
     _countries = ["Switzerland"]
+    _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "true"
     os.environ["HUNTY_HOURS_OLD"]  = "252"   # 1.5 weeks
 elif _mode == "eu":
     _countries = _EU_COUNTRIES
+    _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
-else:  # switzerland (default)
+else:  # switzerland (default) — LinkedIn searches Europe, other sources Switzerland only
     _countries = ["Switzerland"]
+    _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
 
@@ -75,6 +78,7 @@ def main() -> None:
 
     result = run_job_scraper(
         countries_override=_countries,
+        linkedin_location_override=_linkedin_location,
         keywords_override=_settings.get("keywords") or None,
         swiss_keywords_override=_settings.get("swiss_keywords") or None,
         prefilter_required_override=_settings.get("prefilter_required") or None,
