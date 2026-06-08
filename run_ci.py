@@ -60,7 +60,7 @@ else:  # switzerland (default) — LinkedIn searches Europe, other sources Switz
 # ---------------------------------------------------------------------------
 # Now safe to import config-dependent modules
 # ---------------------------------------------------------------------------
-from email_sender import send_report
+from email_sender import send_no_jobs_report, send_report
 from main import run_job_scraper, setup_logging
 from pdf_writer import generate_pdf, load_jobs_from_excel
 
@@ -87,13 +87,15 @@ def main() -> None:
         prefilter_bypass_keywords_override=_settings.get("prefilter_bypass_keywords") or None,
     )
     if result is None:
-        logger.info("No jobs scraped — nothing to send.")
+        logger.info("No jobs scraped — sending confirmation email.")
+        send_no_jobs_report()
         sys.exit(0)
 
     excel_path, new_count, stats = result
 
     if new_count == 0:
-        logger.info("No new jobs this run — skipping email.")
+        logger.info("No new jobs this run — sending confirmation email.")
+        send_no_jobs_report(stats=stats)
         sys.exit(0)
 
     pdf_path = excel_path.replace(".xlsx", ".pdf")
