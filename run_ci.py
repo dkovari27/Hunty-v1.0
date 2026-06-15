@@ -51,9 +51,9 @@ elif _mode == "eu":
     _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
-else:  # switzerland (default) — LinkedIn searches Europe, other sources Switzerland only
+else:  # switzerland (default) — all sources Switzerland only
     _countries = ["Switzerland"]
-    _linkedin_location = "Europe"
+    _linkedin_location = "Switzerland"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
 
