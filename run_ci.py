@@ -46,16 +46,19 @@ if _mode == "switzerland-weekly":
     _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "true"
     os.environ["HUNTY_HOURS_OLD"]  = "252"   # 1.5 weeks
+    os.environ["HUNTY_EXA"]        = "false"
 elif _mode == "eu":
     _countries = _EU_COUNTRIES
     _linkedin_location = "Europe"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
+    os.environ["HUNTY_EXA"]        = "false"
 else:  # switzerland (default) — all sources Switzerland only
     _countries = ["Switzerland"]
     _linkedin_location = "Switzerland"
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
+    os.environ["HUNTY_EXA"]        = "false"
 
 # ---------------------------------------------------------------------------
 # Now safe to import config-dependent modules

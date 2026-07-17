@@ -37,7 +37,7 @@ ENABLE_INDEED = False
 ENABLE_LINKEDIN = True
 ENABLE_JOBSCH = True
 # Exa semantic search (no domain restriction = company career pages)
-ENABLE_EXA = True
+ENABLE_EXA = os.getenv("HUNTY_EXA", "true").lower() != "false"
 ENABLE_ORGCHEM = True   # organic-chemistry.org/jobs/europe.htm
 # academicpositions.com and scholarshipdb.net are toggled via the
 # Excel Status column in European_Job_Search_Websites.xlsx
