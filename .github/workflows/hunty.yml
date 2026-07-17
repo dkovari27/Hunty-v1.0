@@ -2,8 +2,8 @@ name: Hunty Job Scraper
 
 on:
   schedule:
-    # Wednesday at 06:00 UTC — LinkedIn + jobs.ch (Switzerland), Exa disabled
-    - cron: '0 6 * * 3'
+    # Monday and Thursday at 08:00 UTC (10:00 Basel summer / 09:00 winter) — Switzerland only, Exa disabled
+    - cron: '0 8 * * 1,4'
   workflow_dispatch:
     inputs:
       mode:

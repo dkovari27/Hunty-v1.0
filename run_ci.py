@@ -2,8 +2,7 @@
 run_ci.py — CI entry point for GitHub Actions.
 
 Modes (set via HUNTY_MODE env var):
-  switzerland        Daily Mon/Wed/Fri — LinkedIn (Europe-wide) + jobs.ch +
-                     Exa (Switzerland).  Fast (~10 min).
+  switzerland        Mon/Thu 08:00 UTC — LinkedIn + jobs.ch (Switzerland), Exa disabled.  Fast (~10 min).
   switzerland-weekly Manual trigger — same PLUS Swiss company career pages,
                      1.5-week lookback window.  Slow (~1.5 h).
   eu                 Manual trigger — full 14-country EU search.  Very slow (~4 h).
