@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import pathlib
+import subprocess
 import sys
 
 # ---------------------------------------------------------------------------
@@ -112,5 +113,59 @@ def main() -> None:
     logger.info("Done — %d new jobs emailed.", new_count)
 
 
+def _persist_history_railway() -> None:
+    """
+    Push seen_jobs_history.json back to GitHub.
+    Only runs when GH_PAT env var is set (Railway deployments).
+    On GitHub Actions the workflow YAML handles this step instead.
+    """
+    pat = os.getenv("GH_PAT", "").strip()
+    if not pat:
+        return
+
+    repo_dir = pathlib.Path(__file__).parent
+    history  = repo_dir / "outputs" / "seen_jobs_history.json"
+
+    def _git(*args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            ["git", *args], cwd=repo_dir,
+            capture_output=True, text=True,
+        )
+
+    try:
+        # Authenticate via PAT in the remote URL
+        remote = _git("remote", "get-url", "origin").stdout.strip()
+        if "github.com" in remote and "@" not in remote:
+            # insert PAT: https://PAT@github.com/...
+            authed = remote.replace("https://", f"https://{pat}@")
+            _git("remote", "set-url", "origin", authed)
+
+        _git("config", "user.name",  "Hunty Bot")
+        _git("config", "user.email", "actions@github.com")
+        _git("add", str(history))
+
+        diff = _git("diff", "--staged", "--quiet")
+        if diff.returncode == 0:
+            logger.info("seen_jobs_history.json unchanged — nothing to push.")
+            return
+
+        _git("commit", "-m", "chore: update job history [skip ci]")
+
+        for attempt in range(1, 4):
+            pull = _git("pull", "--rebase", "origin", "main")
+            if pull.returncode != 0:
+                logger.warning("git pull attempt %d failed: %s", attempt, pull.stderr)
+            push = _git("push", "origin", "main")
+            if push.returncode == 0:
+                logger.info("Job history pushed to GitHub.")
+                return
+            logger.warning("git push attempt %d failed: %s", attempt, push.stderr)
+
+        logger.error("Failed to push job history after 3 attempts.")
+    except Exception as exc:
+        logger.error("Git push-back error: %s", exc)
+
+
 if __name__ == "__main__":
     main()
+    _persist_history_railway()

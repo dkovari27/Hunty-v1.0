@@ -44,7 +44,9 @@ def send_no_jobs_report(stats: dict | None = None) -> None:
     msg.attach(MIMEText("\n".join(lines), "plain"))
 
     logger.info("Sending no-new-jobs confirmation to %s…", to_address)
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
+        server.ehlo()
+        server.starttls()
         server.login(gmail_address, app_password)
         server.send_message(msg)
     logger.info("Email sent: %s", subject)
@@ -77,7 +79,9 @@ def send_report(pdf_path: str, new_count: int) -> None:
         msg.attach(part)
 
     logger.info("Sending report to %s via Gmail SMTP…", to_address)
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
+        server.ehlo()
+        server.starttls()
         server.login(gmail_address, app_password)
         server.send_message(msg)
     logger.info("Email sent: %s", subject)
