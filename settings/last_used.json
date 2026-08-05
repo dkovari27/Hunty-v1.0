@@ -1,6 +1,6 @@
 {
   "name": "last_used",
-  "saved_at": "2026-08-05T15:17:42",
+  "saved_at": "2026-08-06T01:48:41",
   "countries": [
     "Switzerland"
   ],
@@ -51,6 +51,23 @@
     "data science"
   ],
   "prefilter_excluded": [
+    "clinical",
+    "Technican",
+    "business analyst",
+    "recruitment",
+    "finance",
+    "defence",
+    "master thesis",
+    "sorbent",
+    "data security",
+    "Data Platform Engineer",
+    "circuit design",
+    "backend",
+    "frontend",
+    "Power Electronic",
+    "investment",
+    "abacus",
+    "stability",
     "electrical engineer",
     "mechanical engineer",
     "civil engineer",
