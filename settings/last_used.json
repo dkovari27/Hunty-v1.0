@@ -1,6 +1,6 @@
 {
   "name": "last_used",
-  "saved_at": "2026-05-28T19:17:55",
+  "saved_at": "2026-08-05T15:17:42",
   "countries": [
     "Switzerland"
   ],
@@ -17,7 +17,12 @@
     "Small molecule drug discovery scientist",
     "Synthetic medicinal chemist",
     "Chemist hit-to-lead",
-    "Organic chemist"
+    "Organic chemist",
+    "digital synthesis",
+    "AI consultant",
+    "life science consultant",
+    "data science consultant",
+    "solution consultant"
   ],
   "swiss_keywords": [
     "Chemiker",
@@ -40,7 +45,10 @@
     "computational",
     "cheminformatics",
     "organic",
-    "biotech"
+    "biotech",
+    "consultant",
+    "AI",
+    "data science"
   ],
   "prefilter_excluded": [
     "electrical engineer",
@@ -90,7 +98,6 @@
     "nachhaltigkeit",
     "projektmanagement",
     "SAP",
-    "solution consultant",
     "technology risk",
     "chancellor",
     "marketing",
