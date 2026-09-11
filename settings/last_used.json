@@ -1,6 +1,6 @@
 {
   "name": "last_used",
-  "saved_at": "2026-08-06T01:48:41",
+  "saved_at": "2026-09-11T20:50:53",
   "countries": [
     "Switzerland"
   ],
@@ -22,7 +22,9 @@
     "AI consultant",
     "life science consultant",
     "data science consultant",
-    "solution consultant"
+    "solution consultant",
+    "AI Engineer",
+    "Data Engineer"
   ],
   "swiss_keywords": [
     "Chemiker",
@@ -48,11 +50,15 @@
     "biotech",
     "consultant",
     "AI",
-    "data science"
+    "data science",
+    "data engineer"
   ],
   "prefilter_excluded": [
     "clinical",
-    "Technican",
+    "Technician",
+    "hardware",
+    "viability",
+    "developer",
     "business analyst",
     "recruitment",
     "finance",
@@ -68,11 +74,8 @@
     "investment",
     "abacus",
     "stability",
-    "electrical engineer",
-    "mechanical engineer",
-    "civil engineer",
-    "software engineer",
-    "process engineer",
+    "engineer",
+    "consultant",
     "accountant",
     "solicitor",
     "lawyer",

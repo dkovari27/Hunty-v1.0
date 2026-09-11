@@ -1093,7 +1093,7 @@ class JobHunterApp:
             highlightbackground=SEP_COLOR, highlightthickness=1,
         ).grid(row=3, column=0, sticky="ew")
         tk.Label(
-            sg, text="GitHub Actions: Mon–Fri, 07:00 UTC (08:00 CET / 09:00 CEST)",
+            sg, text="GitHub Actions: Mon & Thu, 08:00 UTC (09:00 CET / 10:00 CEST)",
             font=(FONT, 8), fg=SUBTEXT, bg=BG,
         ).grid(row=3, column=1, sticky="w", padx=(_C1, 0))
 

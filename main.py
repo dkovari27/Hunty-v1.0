@@ -12,10 +12,12 @@ Run scheduled:  python run_ci.py  (or via GitHub Actions cron)
 """
 import logging
 import os
+import re
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from config import (
     EUROPEAN_COUNTRIES,
@@ -56,6 +58,92 @@ def setup_logging() -> None:
 
 _POSTDOC_TERMS = ("postdoc", "postdoctoral", "post-doc", "post doc")
 
+# Terms that are themselves short/common letter sequences (e.g. "ai" is a
+# substring of "email", "contains", "training", "maintain", "certain"...)
+# need a word-boundary regex instead of plain substring matching, or they
+# false-positive-match almost every job. "aiml" (no separator, e.g. "AIML
+# Engineer") is treated as an equivalent hit for "ai".
+_WORD_BOUNDARY_TERMS = {
+    "ai": re.compile(r"\b(?:ai|aiml)\b"),
+}
+
+
+def _term_matches(term: str, text: str) -> bool:
+    """True if `term` is found in `text` (both compared lowercase).
+
+    Falls back to a word-boundary regex for short, collision-prone terms
+    (see _WORD_BOUNDARY_TERMS above); everything else uses a plain
+    substring match, which is intentional for stem-style terms like
+    "chem"/"synth"/"molec" that are meant to match partial words
+    (chemistry, synthetic, molecular, ...).
+    """
+    term_lower = term.lower()
+    pattern = _WORD_BOUNDARY_TERMS.get(term_lower)
+    if pattern is not None:
+        return bool(pattern.search(text))
+    return term_lower in text
+
+
+# A blanket excluded-title term can still let specific roles through when the
+# title also matches one of these — e.g. "engineer" excludes almost every
+# engineering title EXCEPT "data engineer" / "AI engineer" / "AI/ML engineer",
+# which are wanted. Keyed by the excluded term (lowercase); add more entries
+# here as needed for other blanket terms.
+_EXCLUDED_TITLE_EXCEPTIONS: dict[str, re.Pattern] = {
+    "engineer": re.compile(r"\bdata\b|\b(?:ai|aiml)\b"),
+    # "consultant" excludes almost every consulting title EXCEPT R&D, life
+    # science, solution, and AI/data consulting — see _has_senior_outside_brackets
+    # below for the additional seniority rule layered on top of this.
+    "consultant": re.compile(
+        r"r\s*&\s*d|r\s*and\s*d|\brnd\b|life\s*science|solution|\b(?:ai|aiml)\b|\bdata\b"
+    ),
+}
+
+
+def _has_senior_outside_brackets(title: str) -> bool:
+    """True if "senior" appears in `title` outside any (...)/[...] group.
+
+    Used to still exclude "Senior Consultant (m/f/d)" (senior sits outside
+    the brackets) while allowing "Consultant (Senior)" through (senior is
+    bracketed, e.g. as an optional/negotiable level) — bracket contents are
+    stripped before the "senior" check runs.
+    """
+    stripped = re.sub(r"[\(\[][^\)\]]*[\)\]]", "", title)
+    return bool(re.search(r"\bsenior\b", stripped))
+
+
+# Excluded terms whose exception match (above) can still be overridden —
+# i.e. the title is excluded anyway — when this extra check returns True.
+# Used for "consultant": an otherwise-wanted subtype (e.g. "solution
+# consultant") is still dropped if it's a *senior* role written outside
+# brackets, per _has_senior_outside_brackets.
+_EXCLUDED_TITLE_FORCE_BLOCK: dict[str, Callable[[str], bool]] = {
+    "consultant": _has_senior_outside_brackets,
+}
+
+
+def _title_excluded(title: str, excluded: list[str]) -> bool:
+    """True if `title` matches one of the excluded terms.
+
+    Checks _EXCLUDED_TITLE_EXCEPTIONS first: if an excluded term has a
+    registered exception pattern and the title matches that pattern, this
+    particular excluded term is normally skipped (the title may still be
+    dropped by a different excluded term) — UNLESS the term also has a
+    registered _EXCLUDED_TITLE_FORCE_BLOCK check that returns True for this
+    title, in which case the exception is overridden and the term still
+    excludes it (see "consultant" + seniority above).
+    """
+    for excl in excluded:
+        key = excl.lower()
+        exception = _EXCLUDED_TITLE_EXCEPTIONS.get(key)
+        if exception is not None and exception.search(title):
+            force_block = _EXCLUDED_TITLE_FORCE_BLOCK.get(key)
+            if force_block is None or not force_block(title):
+                continue
+        if _term_matches(excl, title):
+            return True
+    return False
+
 
 def _prefilter(
     jobs: list[dict],
@@ -72,6 +160,14 @@ def _prefilter(
       - contain none of the required terms in title+description
         (only when required list is non-empty), OR
       - contain any excluded location term in the location field.
+
+    A handful of excluded title terms have a registered exception pattern
+    (see _EXCLUDED_TITLE_EXCEPTIONS) — e.g. "engineer" excludes almost all
+    engineering titles except "data engineer" / "AI engineer" / "AI/ML
+    engineer"; "consultant" excludes almost all consulting titles except
+    R&D, life science, solution, and AI/data consulting — and even those
+    are still excluded if "senior" appears outside brackets in the title
+    (see _has_senior_outside_brackets).
 
     When postdoc_mode=True, jobs whose title contains a postdoc term bypass
     the required-keyword check (exclusion and location filters still apply).
@@ -98,10 +194,10 @@ def _prefilter(
         body     = title + " " + job.get("description", "").lower()
         location = job.get("location", "").lower()
 
-        if any(excl.lower() in title for excl in excluded):
+        if _title_excluded(title, excluded):
             continue
 
-        if excluded_locations and any(excl.lower() in location for excl in excluded_locations):
+        if excluded_locations and any(_term_matches(excl, location) for excl in excluded_locations):
             continue
 
         # PostDoc two-track: postdoc-titled jobs skip the required-keyword check.
@@ -116,7 +212,7 @@ def _prefilter(
                 kept.append(job)
                 continue
 
-        if required and not any(req.lower() in body for req in required):
+        if required and not any(_term_matches(req, body) for req in required):
             continue
 
         kept.append(job)
@@ -130,6 +226,7 @@ def run_job_scraper(
     swiss_keywords_override: list[str] | None = None,
     location_override: str | None = None,
     countries_override: list[str] | None = None,
+    enable_european_override: bool | None = None,
     prefilter_required_override: list[str] | None = None,
     prefilter_excluded_override: list[str] | None = None,
     prefilter_excluded_locations_override: list[str] | None = None,
@@ -148,6 +245,12 @@ def run_job_scraper(
     keywords_override           — replaces config.SEARCH_KEYWORDS when provided.
     location_override           — overrides the Exa/jobs.ch search location.
     countries_override          — list of countries for the European boards scraper.
+    enable_european_override    — explicitly force the European multi-country boards
+                                  scraper on/off, overriding the default behavior of
+                                  "on whenever countries_override is provided". Used by
+                                  run_ci.py so Switzerland-only CI modes don't
+                                  accidentally trigger the slow European scraper just
+                                  because they pass countries_override=["Switzerland"].
     linkedin_location_override  — overrides LinkedIn search location independently
                                   of countries_override (e.g. "Europe" while other
                                   sources stay Switzerland-only).
@@ -182,13 +285,19 @@ def run_job_scraper(
     exa_location   = location_override or "Switzerland"
 
     # European scraper: use countries_override when GUI provides it,
-    # otherwise fall back to config flags.
+    # otherwise fall back to config flags. enable_european_override, when
+    # given, wins outright — this is how CI keeps Switzerland-only modes
+    # from triggering the slow European scraper just because they still
+    # pass countries_override=["Switzerland"] for LinkedIn/location scoping.
     if countries_override is not None:
         run_european     = bool(countries_override)
         run_eu_countries = countries_override
     else:
         run_european     = ENABLE_EUROPEAN
         run_eu_countries = EUROPEAN_COUNTRIES
+
+    if enable_european_override is not None:
+        run_european = enable_european_override
 
     # LinkedIn location: explicit override wins; otherwise single-country runs
     # search that country directly and multi-country runs use "Europe".

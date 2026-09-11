@@ -2,10 +2,20 @@
 run_ci.py — CI entry point for GitHub Actions.
 
 Modes (set via HUNTY_MODE env var):
-  switzerland        Mon/Thu 08:00 UTC — LinkedIn + jobs.ch (Switzerland), Exa disabled.  Fast (~10 min).
-  switzerland-weekly Manual trigger — same PLUS Swiss company career pages,
-                     1.5-week lookback window.  Slow (~1.5 h).
-  eu                 Manual trigger — full 14-country EU search.  Very slow (~4 h).
+  switzerland        Mon/Thu 08:00 UTC — LinkedIn only (Switzerland-scoped).
+                     jobs.ch, organic-chemistry.org, Swiss company pages,
+                     the European multi-country boards, and Exa are all off. Fast.
+  switzerland-weekly Manual trigger — LinkedIn + jobs.ch + organic-chemistry.org
+                     PLUS Swiss company career pages, 1.5-week lookback window.
+                     European multi-country boards off.  Slow (~1.5 h).
+  eu                 Manual trigger — full 14-country EU search, including the
+                     European multi-country boards.  Very slow (~4 h).
+
+  NOTE: prior to 2026-09-11 the "switzerland" mode accidentally also ran the
+  Playwright-based European multi-country boards scraper on every scheduled
+  run (a bug in how countries_override was interpreted — see main.py's
+  enable_european_override), which is why past runs took ~2.2-2.6 h instead
+  of the fast run this mode is meant to be. That bug is now fixed.
 
 Keywords and filters are read from settings/last_used.json when present,
 falling back to config_personal.py defaults.
@@ -44,21 +54,30 @@ _EU_COUNTRIES = [
 if _mode == "switzerland-weekly":
     _countries = ["Switzerland"]
     _linkedin_location = "Europe"
+    _enable_european    = False
     os.environ["HUNTY_SWISS"]      = "true"
     os.environ["HUNTY_HOURS_OLD"]  = "252"   # 1.5 weeks
     os.environ["HUNTY_EXA"]        = "false"
+    os.environ["HUNTY_JOBSCH"]     = "true"
+    os.environ["HUNTY_ORGCHEM"]    = "true"
 elif _mode == "eu":
     _countries = _EU_COUNTRIES
     _linkedin_location = "Europe"
+    _enable_european    = True
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
     os.environ["HUNTY_EXA"]        = "false"
-else:  # switzerland (default) — all sources Switzerland only
+    os.environ["HUNTY_JOBSCH"]     = "true"
+    os.environ["HUNTY_ORGCHEM"]    = "true"
+else:  # switzerland (default, scheduled) — LinkedIn only, Switzerland-scoped
     _countries = ["Switzerland"]
     _linkedin_location = "Switzerland"
+    _enable_european    = False
     os.environ["HUNTY_SWISS"]      = "false"
     os.environ["HUNTY_HOURS_OLD"]  = "168"
     os.environ["HUNTY_EXA"]        = "false"
+    os.environ["HUNTY_JOBSCH"]     = "false"
+    os.environ["HUNTY_ORGCHEM"]    = "false"
 
 # ---------------------------------------------------------------------------
 # Now safe to import config-dependent modules
@@ -74,13 +93,16 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     """Run the full scrape → PDF → email pipeline for CI/scheduled execution."""
     logger.info(
-        "CI run starting — mode=%s, countries=%d, swiss_companies=%s, hours_old=%s",
+        "CI run starting — mode=%s, countries=%d, swiss_companies=%s, hours_old=%s, "
+        "european=%s, jobsch=%s, orgchem=%s",
         _mode, len(_countries),
         os.environ["HUNTY_SWISS"], os.environ["HUNTY_HOURS_OLD"],
+        _enable_european, os.environ["HUNTY_JOBSCH"], os.environ["HUNTY_ORGCHEM"],
     )
 
     result = run_job_scraper(
         countries_override=_countries,
+        enable_european_override=_enable_european,
         linkedin_location_override=_linkedin_location,
         keywords_override=_settings.get("keywords") or None,
         swiss_keywords_override=_settings.get("swiss_keywords") or None,

@@ -7,6 +7,16 @@ Refresh the page — a new run appears at the top with a yellow spinner; click i
 
 
 
+Schedule and modes:
+The workflow runs automatically Monday and Thursday at 08:00 UTC (09:00 CET / 10:00 CEST). GitHub does not guarantee an exact start time for scheduled workflows, actual starts can run late (sometimes by several hours) under GitHub-wide load; this is a platform limit, not something the workflow controls.
+
+Three modes exist (pick one from the Run workflow dropdown for a manual run; the scheduled run always uses "switzerland"):
+- switzerland (scheduled default): LinkedIn only, scoped to Switzerland. jobs.ch, organic-chemistry.org, Swiss company career pages, the European multi-country boards, and Exa are all off. Fast.
+- switzerland-weekly (manual only): LinkedIn, jobs.ch, and organic-chemistry.org, plus Swiss company career pages, with a 1.5-week lookback window. Slow (~1.5 h).
+- eu (manual only): full 14-country EU search, including the European multi-country boards. Very slow (~4 h).
+
+Keywords and the prefilter (required/excluded terms, excluded locations) are read from settings/last_used.json, which the desktop GUI autosaves and commits to git, so whatever is configured in the GUI is what the scheduled run uses.
+
 
 How to get the perfect keyword filtering of your CV that can be easily pasted into Hunty:
 Copy the following text into any AI and add your CV to the message.

@@ -28,6 +28,8 @@ SEARCH_KEYWORDS = [
     "Small molecule drug discovery scientist",
     "Synthetic medicinal chemist hit-to-lead",
     "Technical product manager cheminformatics",
+    "AI Engineer",
+    "Data Engineer",
 ]
 
 # Used for jobs.ch and Swiss company career pages — short terms work better
@@ -89,13 +91,23 @@ PREFILTER_REQUIRED = [
     "docking",
     "organic",
     "biotech",
+    "data engineer",  # AI Engineer roles are already covered by main.py's "AI" word-boundary match
 ]
 
 # Jobs whose TITLE contains any of these terms are dropped before AI scoring.
+# NOTE: "engineer" and "consultant" are blanket exclusions, but main.py's
+# _EXCLUDED_TITLE_EXCEPTIONS lets specific subtypes through anyway:
+#   engineer   -> "data engineer" / "AI engineer" / "AI/ML engineer"
+#   consultant -> R&D, life science, solution, and AI/data consulting
+#                 (and even those are still excluded if written as
+#                 "Senior ..." with "senior" outside brackets — see
+#                 _has_senior_outside_brackets / _EXCLUDED_TITLE_FORCE_BLOCK)
 PREFILTER_EXCLUDED_TITLE = [
-    # Engineering (non-chemistry)
-    "electrical engineer", "mechanical engineer", "civil engineer",
-    "software engineer", "process engineer",
+    # Engineering (non-chemistry) — "data"/"AI" engineer roles are exempted, see note above
+    "engineer",
+    # Consulting — only R&D / life science / solution / AI / data consulting
+    # are exempted (and only non-senior, or senior-in-brackets), see note above
+    "consultant",
     # Finance / legal / admin
     "accountant", "solicitor", "lawyer", "procurement", "supply chain",
     "tax manager", "wealth", "vermögensberatung",
@@ -112,10 +124,12 @@ PREFILTER_EXCLUDED_TITLE = [
     "occupational safety",
     "registered nurse", "rn -",
     "rehab therapy", "therapy aide",
-    # IT / non-pharma consulting
+    # IT / non-pharma consulting — "IT consultant" is now redundant with the
+    # blanket "consultant" exclusion above but kept for clarity; "solution
+    # consultant" was removed since that's a wanted subtype (see note above)
     "executive search", "IT consultant", "IT project",
     "digital health", "institutionelle", "nachhaltigkeit",
-    "projektmanagement", "SAP", "solution consultant", "technology risk",
+    "projektmanagement", "SAP", "technology risk",
     # Marketing / admin
     "chancellor", "marketing",
     # Wrong biology sub-disciplines
