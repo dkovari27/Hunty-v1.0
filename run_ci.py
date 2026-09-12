@@ -83,6 +83,7 @@ else:  # switzerland (default, scheduled) — LinkedIn only, Switzerland-scoped
 # Now safe to import config-dependent modules
 # ---------------------------------------------------------------------------
 from email_sender import send_no_jobs_report, send_report
+from excel_writer import export_jobs_json
 from main import run_job_scraper, setup_logging
 from pdf_writer import generate_pdf, load_jobs_from_excel
 
@@ -130,7 +131,10 @@ def main() -> None:
         sys.exit(0)
     generate_pdf(jobs, pdf_path, stats=stats)
 
-    send_report(pdf_path, new_count)
+    json_path = pdf_path.replace(".pdf", ".json")
+    export_jobs_json(jobs, json_path)
+
+    send_report(pdf_path, new_count, json_path)
     logger.info("Done — %d new jobs emailed.", new_count)
 
 

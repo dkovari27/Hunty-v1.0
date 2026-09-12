@@ -1,10 +1,10 @@
 """
-email_sender.py — Sends the PDF report via Gmail SMTP.
+email_sender.py: sends the PDF report via Gmail SMTP.
 
 Reads credentials from environment variables:
-    GMAIL_ADDRESS      — sender address (your Gmail)
-    GMAIL_APP_PASSWORD — Gmail App Password (not your login password)
-    REPORT_EMAIL       — recipient; defaults to GMAIL_ADDRESS if not set
+    GMAIL_ADDRESS:      sender address (your Gmail)
+    GMAIL_APP_PASSWORD: Gmail App Password (not your login password)
+    REPORT_EMAIL:       recipient; defaults to GMAIL_ADDRESS if not set
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ def send_no_jobs_report(stats: dict | None = None) -> None:
     app_password   = os.environ["GMAIL_APP_PASSWORD"]
     to_address     = os.environ.get("REPORT_EMAIL", gmail_address)
 
-    subject = "Hunty — no new jobs today"
+    subject = "Hunty: no new jobs today"
 
     lines = ["The scraper ran successfully but found no new listings.\n"]
     if stats:
@@ -52,23 +52,32 @@ def send_no_jobs_report(stats: dict | None = None) -> None:
     logger.info("Email sent: %s", subject)
 
 
-def send_report(pdf_path: str, new_count: int) -> None:
-    """Attach pdf_path and send to REPORT_EMAIL via Gmail SMTP SSL."""
+def send_report(pdf_path: str, new_count: int, json_path: str | None = None) -> None:
+    """Attach pdf_path (and optionally json_path) and send to REPORT_EMAIL via Gmail SMTP.
+
+    json_path, when given, is the same new-jobs list as the PDF, exported as
+    JSON: meant to be pasted/uploaded into a Claude Pro/Sonnet chat for
+    manual relevance scoring against your CV, without needing the API.
+    """
     gmail_address = os.environ["GMAIL_ADDRESS"]
     app_password   = os.environ["GMAIL_APP_PASSWORD"]
     to_address     = os.environ.get("REPORT_EMAIL", gmail_address)
 
-    subject = f"Hunty — {new_count} new job{'s' if new_count != 1 else ''}"
+    subject = f"Hunty: {new_count} new job{'s' if new_count != 1 else ''}"
 
     msg = MIMEMultipart()
     msg["From"]    = gmail_address
     msg["To"]      = to_address
     msg["Subject"] = subject
 
-    msg.attach(MIMEText(
-        f"{new_count} new listing{'s' if new_count != 1 else ''} attached.\n\nHunty",
-        "plain",
-    ))
+    body = f"{new_count} new listing{'s' if new_count != 1 else ''} attached.\n\nHunty"
+    if json_path:
+        body = (
+            f"{new_count} new listing{'s' if new_count != 1 else ''} attached (PDF + JSON).\n"
+            "The JSON has the same jobs in full: paste or upload it into a Claude chat "
+            "along with your CV to have it scored for relevance.\n\nHunty"
+        )
+    msg.attach(MIMEText(body, "plain"))
 
     with open(pdf_path, "rb") as f:
         part = MIMEApplication(f.read(), _subtype="pdf")
@@ -77,6 +86,15 @@ def send_report(pdf_path: str, new_count: int) -> None:
             filename=Path(pdf_path).name,
         )
         msg.attach(part)
+
+    if json_path:
+        with open(json_path, "rb") as f:
+            part = MIMEApplication(f.read(), _subtype="json")
+            part.add_header(
+                "Content-Disposition", "attachment",
+                filename=Path(json_path).name,
+            )
+            msg.attach(part)
 
     logger.info("Sending report to %s via Gmail SMTP…", to_address)
     with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as server:
